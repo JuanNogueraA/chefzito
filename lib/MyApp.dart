@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Screens/Home_Screen.dart';
+import 'package:chefzito/Screens/Search_Screen.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -18,7 +19,10 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
       ),
       initialRoute: '/ ',
-      routes: {'/': (context) => HomeScreen()},
+      routes: {
+        '/': (context) => HomeScreen(),
+        '/buscar': (context) => SearchScreen(),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
