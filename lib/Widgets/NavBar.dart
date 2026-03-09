@@ -38,6 +38,7 @@ class _NavbarState extends State<Navbar> {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
+      type: BottomNavigationBarType.fixed,
       selectedItemColor: Colors.deepOrange[400],
       unselectedItemColor: Colors.grey[600],
       onTap: _onItemTapped,
