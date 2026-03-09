@@ -24,6 +24,8 @@ class _MyAppState extends State<MyApp> {
         '/': (context) => HomeScreen(),
         '/buscar': (context) => SearchScreen(),
         '/social': (context) => CommunityScreen(),
+        '/rankings': (context) => RankingsScreen(),
+        '/perfil': (context) => ProfileScreen(),
       },
       debugShowCheckedModeBanner: false,
     );
