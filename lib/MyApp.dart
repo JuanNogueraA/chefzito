@@ -4,6 +4,8 @@ import 'package:chefzito/Screens/Login_Screen.dart';
 import 'package:chefzito/Screens/Home_Screen.dart';
 import 'package:chefzito/Screens/Search_Screen.dart';
 import 'package:chefzito/Screens/Community_Screen.dart';
+import 'package:chefzito/Screens/Rankings_Screen.dart';
+import 'package:chefzito/Screens/Profile_Screen.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
