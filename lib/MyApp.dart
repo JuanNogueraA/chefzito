@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Screens/Home_Screen.dart';
 import 'package:chefzito/Screens/Search_Screen.dart';
+import 'package:chefzito/Screens/Community_Screen.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -22,6 +23,7 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/': (context) => HomeScreen(),
         '/buscar': (context) => SearchScreen(),
+        '/social': (context) => CommunityScreen(),
       },
       debugShowCheckedModeBanner: false,
     );
