@@ -8,36 +8,57 @@ class Navbar extends StatefulWidget {
 }
 
 class _NavbarState extends State<Navbar> {
-  int _selectedIndex = 0;
+  int _getSelectedIndex() {
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    switch (currentRoute) {
+      case '/home':
+        return 0;
+      case '/buscar':
+        return 1;
+      case '/social':
+        return 2;
+      case '/rankings':
+        return 3;
+      case '/perfil':
+        return 4;
+      default:
+        return 0;
+    }
+  }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    // Obtener la ruta actual
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    String targetRoute = '';
 
     switch (index) {
       case 0:
-        Navigator.pushNamed(context, '/');
+        targetRoute = '/home';
         break;
       case 1:
-        Navigator.pushNamed(context, '/buscar');
+        targetRoute = '/buscar';
         break;
       case 2:
-        Navigator.pushNamed(context, '/social');
+        targetRoute = '/social';
         break;
       case 3:
-        Navigator.pushNamed(context, '/rankings');
+        targetRoute = '/rankings';
         break;
       case 4:
-        Navigator.pushNamed(context, '/perfil');
+        targetRoute = '/perfil';
         break;
+    }
+
+    // Solo navegar si la ruta destino es diferente a la actual
+    if (currentRoute != targetRoute) {
+      Navigator.pushReplacementNamed(context, targetRoute);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: _selectedIndex,
+      currentIndex: _getSelectedIndex(),
       type: BottomNavigationBarType.fixed,
       selectedItemColor: Colors.deepOrange[400],
       unselectedItemColor: Colors.grey[600],

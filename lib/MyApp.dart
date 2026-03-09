@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chefzito/Screens/Welcome_Screen.dart';
+import 'package:chefzito/Screens/Login_Screen.dart';
 import 'package:chefzito/Screens/Home_Screen.dart';
 import 'package:chefzito/Screens/Search_Screen.dart';
 import 'package:chefzito/Screens/Community_Screen.dart';
@@ -21,7 +23,9 @@ class _MyAppState extends State<MyApp> {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => HomeScreen(),
+        '/': (context) => const WelcomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => HomeScreen(),
         '/buscar': (context) => SearchScreen(),
         '/social': (context) => CommunityScreen(),
         '/rankings': (context) => RankingsScreen(),
