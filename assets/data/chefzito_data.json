@@ -1,0 +1,140 @@
+{
+  "usuarios": [
+    {
+      "id": 1,
+      "username": "chefjuan",
+      "email": "juan@chefzito.com",
+      "avatar_url": "assets/img/avatar1.png",
+      "created_at": "2026-04-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "username": "mariacocina",
+      "email": "maria@chefzito.com",
+      "avatar_url": "assets/img/avatar2.png",
+      "created_at": "2026-04-02T11:00:00Z"
+    },
+    {
+      "id": 3,
+      "username": "luisgrill",
+      "email": "luis@chefzito.com",
+      "avatar_url": "assets/img/avatar3.png",
+      "created_at": "2026-04-03T12:00:00Z"
+    }
+  ],
+  "recetas": [
+    {
+      "id": 1,
+      "author_id": 1,
+      "title": "Pasta Alfredo",
+      "description": "Pasta cremosa en 20 minutos",
+      "cover_image_url": "assets/img/recipe1.png",
+      "steps": [
+        "Hervir pasta",
+        "Preparar salsa",
+        "Mezclar y servir"
+      ],
+      "prep_time_min": 20,
+      "difficulty": "facil",
+      "generated_by_ai": false
+    },
+    {
+      "id": 2,
+      "author_id": 2,
+      "title": "Ensalada Mediterranea",
+      "description": "Fresca y saludable",
+      "cover_image_url": "assets/img/recipe2.png",
+      "steps": [
+        "Cortar vegetales",
+        "Agregar queso",
+        "Aliñar"
+      ],
+      "prep_time_min": 15,
+      "difficulty": "facil",
+      "generated_by_ai": true
+    },
+    {
+      "id": 3,
+      "author_id": 3,
+      "title": "Tacos de Res",
+      "description": "Tacos caseros para la cena",
+      "cover_image_url": "assets/img/recipe3.png",
+      "steps": [
+        "Cocinar la carne",
+        "Calentar tortillas",
+        "Servir con salsa"
+      ],
+      "prep_time_min": 25,
+      "difficulty": "media",
+      "generated_by_ai": false
+    }
+  ],
+  "publicaciones": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "recipe_id": 1,
+      "description": "Mi pasta favorita para hoy",
+      "likes_count": 5,
+      "created_at": "2026-04-10T16:00:00Z"
+    },
+    {
+      "id": 2,
+      "user_id": 2,
+      "recipe_id": 2,
+      "description": "Comida ligera para la tarde",
+      "likes_count": 3,
+      "created_at": "2026-04-11T13:30:00Z"
+    },
+    {
+      "id": 3,
+      "user_id": 3,
+      "recipe_id": 3,
+      "description": "Mi cena de hoy",
+      "likes_count": 7,
+      "created_at": "2026-04-12T19:00:00Z"
+    }
+  ],
+  "comentarios": [
+    {
+      "id": 1,
+      "post_id": 1,
+      "user_id": 2,
+      "content": "Se ve deliciosa",
+      "created_at": "2026-04-10T16:40:00Z"
+    },
+    {
+      "id": 2,
+      "post_id": 2,
+      "user_id": 1,
+      "content": "La voy a probar",
+      "created_at": "2026-04-11T14:10:00Z"
+    }
+  ],
+  "seguimientos": [
+    {
+      "follower_id": 1,
+      "following_id": 2
+    },
+    {
+      "follower_id": 2,
+      "following_id": 1
+    },
+    {
+      "follower_id": 1,
+      "following_id": 3
+    }
+  ],
+  "tendencias": [
+    {
+      "id": 1,
+      "hashtag": "#Pasta",
+      "count": 22
+    },
+    {
+      "id": 2,
+      "hashtag": "#Healthy",
+      "count": 18
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../services/chefzito_service.dart';
 import '../Widgets/NavBar.dart';
 // ¡Importamos nuestras nuevas piezas de Lego!
 import '../Widgets/Community_Screen_Widgets/Community_Header.dart';
+import '../Widgets/Community_Screen_Widgets/Comments_Bottom_Sheet.dart';
 import '../Widgets/Community_Screen_Widgets/Friends_Stories.dart';
-import '../Widgets/Community_Screen_Widgets/Post_Card.dart';
 import '../Widgets/Community_Screen_Widgets/Create_Post_Modal.dart';
+import '../Widgets/Community_Screen_Widgets/Post_Card.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({Key? key}) : super(key: key);
@@ -15,9 +17,62 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> {
   bool isPublicTab = true;
+  final ChefzitoService _service = ChefzitoService();
+  late final Future<void> _loadFuture;
 
-  Color get primaryColor => isPublicTab ? const Color(0xFFFF5E00) : const Color(0xFF8A2BE2);
-  Color get secondaryColor => isPublicTab ? const Color(0xFFFF2A55) : const Color(0xFF4169E1);
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = _service.init();
+  }
+
+  Color get primaryColor =>
+      isPublicTab ? const Color(0xFFFF5E00) : const Color(0xFF8A2BE2);
+  Color get secondaryColor =>
+      isPublicTab ? const Color(0xFFFF2A55) : const Color(0xFF4169E1);
+
+  String _timeAgo(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inDays > 0) return 'hace ${diff.inDays}d';
+    if (diff.inHours > 0) return 'hace ${diff.inHours}h';
+    if (diff.inMinutes > 0) return 'hace ${diff.inMinutes}min';
+    return 'ahora';
+  }
+
+  void _createPost(CreatePostData data) {
+    final recipeId = _service.findRecipeIdByTitle(data.recipeName) ?? 1;
+
+    setState(() {
+      _service.addPost(
+        data.description.isEmpty ? 'Nueva publicación' : data.description,
+        recipeId,
+      );
+      isPublicTab = data.isPublic;
+    });
+  }
+
+  void _deletePost(int postId) {
+    setState(() {
+      _service.deletePost(postId);
+    });
+  }
+
+  void _toggleFollow(int userId) {
+    setState(() {
+      _service.toggleFollow(userId);
+    });
+  }
+
+  Future<void> _openComments(int postId) async {
+    await showCommentsBottomSheet(
+      context: context,
+      service: _service,
+      postId: postId,
+      onCommentsChanged: () {
+        setState(() {});
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,54 +89,75 @@ class _CommunityScreenState extends State<CommunityScreen> {
               setState(() => isPublicTab = isPublic);
             },
           ),
-          
+
           // 2. LA LISTA DE CONTENIDO
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(0),
-              children: [
-                if (!isPublicTab) FriendsStories(primaryColor: primaryColor),
-                
-                if (isPublicTab) const PostCard(
-                  userName: "María García",
-                  userHandle: "@mariachef",
-                  time: "hace 2h",
-                  recipeName: "Pasta Carbonara",
-                  likes: "234",
-                  caption: "¡Mi primera carbonara siguiendo la receta de Chefzito! Quedó increíble 🤤",
-                  imageUrl: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=1000&auto=format&fit=crop',
-                  isFriend: true,
-                ),
-                
-                if (!isPublicTab) const PostCard(
-                  userName: "Carlos Ruiz",
-                  userHandle: "@carloscocina",
-                  time: "hace 3h",
-                  recipeName: "Bowl Mediterráneo",
-                  likes: "45",
-                  caption: "Solo para mis amigos cercanos 💚 Receta especial que he perfeccionado",
-                  imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1000&auto=format&fit=crop',
-                  isFriend: true,
-                  isPrivate: true,
-                ),
-                
-                if (isPublicTab) const PostCard(
-                  userName: "Chef Viajero",
-                  userHandle: "@chefviajero",
-                  time: "hace 5h",
-                  recipeName: "Salmón a la parrilla",
-                  likes: "156",
-                  caption: "Mi receta favorita del mes.",
-                  imageUrl: 'https://images.unsplash.com/photo-1485921325833-c519f76c4927?q=80&w=1000&auto=format&fit=crop',
-                  isFriend: false,
-                ),
-                const SizedBox(height: 80),
-              ],
+            child: FutureBuilder<void>(
+              future: _loadFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final allPosts = _service.getPosts();
+                final visiblePosts = isPublicTab
+                    ? _service.getPublicPosts()
+                    : _service.getFriendsPosts();
+
+                return ListView(
+                  padding: const EdgeInsets.all(0),
+                  children: [
+                    if (!isPublicTab)
+                      FriendsStories(primaryColor: primaryColor),
+                    if (visiblePosts.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            'No hay publicaciones disponibles',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ...visiblePosts.map((post) {
+                      final user = _service.getUser(post.userId);
+                      final recipe = _service.getRecipe(post.recipeId);
+                      final isFollowing = _service.isFollowing(post.userId);
+                      final isMutual = _service.isMutualFollow(post.userId);
+
+                      return PostCard(
+                        postId: post.id,
+                        authorId: post.userId,
+                        userName: user.username,
+                        userHandle: '@${user.username}',
+                        time: _timeAgo(post.createdAt),
+                        recipeName: recipe.title,
+                        likes: post.likesCount.toString(),
+                        caption: post.description,
+                        imageUrl: recipe.coverImageUrl,
+                        isFollowing: isFollowing,
+                        isMutualFollow: isMutual,
+                        isLiked: post.likedByMe,
+                        onLikePressed: () {
+                          setState(() {
+                            _service.toggleLike(post.id);
+                          });
+                        },
+                        onDeletePressed: () => _deletePost(post.id),
+                        onCommentsPressed: () => _openComments(post.id),
+                        onFollowPressed: () => _toggleFollow(post.userId),
+                        isPrivate: !isPublicTab,
+                      );
+                    }),
+                    const SizedBox(height: 80),
+                  ],
+                );
+              },
             ),
           ),
         ],
       ),
-      
+
       // 3. EL BOTÓN FLOTANTE CON EL MODAL IMPORTADO
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -93,6 +169,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             onTabChanged: (bool isPublic) {
               setState(() => isPublicTab = isPublic);
             },
+            onPublish: _createPost,
           );
         },
         backgroundColor: Colors.transparent,
@@ -102,12 +179,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
           height: 60,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [primaryColor, secondaryColor], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: LinearGradient(
+              colors: [primaryColor, secondaryColor],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           child: const Icon(Icons.add, color: Colors.white, size: 30),
         ),
       ),
-      
+
       bottomNavigationBar: Navbar(),
     );
   }
