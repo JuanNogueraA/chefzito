@@ -53,6 +53,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _service.addPost(
         data.description.isEmpty ? 'Nueva publicación' : data.description,
         recipeId,
+        imageBase64: data.imageBase64,
       );
       isPublicTab = data.isPublic;
     });
@@ -108,10 +109,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final allPosts = _service.getPosts();
                 final visiblePosts = isPublicTab
                     ? _service.getPublicPosts()
                     : _service.getFriendsPosts();
+                final followingIds = _service.getFollowingUserIds();
+                final mutualFollowIds = _service.getMutualFollowUserIds();
 
                 return ListView(
                   padding: const EdgeInsets.all(0),
@@ -131,8 +133,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     ...visiblePosts.map((post) {
                       final user = _service.getUser(post.userId);
                       final recipe = _service.getRecipe(post.recipeId);
-                      final isFollowing = _service.isFollowing(post.userId);
-                      final isMutual = _service.isMutualFollow(post.userId);
+                      final isFollowing = followingIds.contains(post.userId);
+                      final isMutual = mutualFollowIds.contains(post.userId);
 
                       return PostCard(
                         postId: post.id,
@@ -144,6 +146,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         likes: post.likesCount.toString(),
                         caption: post.description,
                         imageUrl: recipe.coverImageUrl,
+                        imageBase64: post.imageBase64,
                         isFollowing: isFollowing,
                         isMutualFollow: isMutual,
                         isLiked: post.likedByMe,

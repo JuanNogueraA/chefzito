@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +13,7 @@ class PostCard extends StatelessWidget {
   final String likes;
   final String caption;
   final String imageUrl;
+  final String? imageBase64;
   final bool isFollowing;
   final bool isMutualFollow;
   final bool isPrivate;
@@ -31,6 +34,7 @@ class PostCard extends StatelessWidget {
     required this.likes,
     required this.caption,
     required this.imageUrl,
+    this.imageBase64,
     required this.isFollowing,
     required this.isMutualFollow,
     required this.isLiked,
@@ -79,6 +83,28 @@ class PostCard extends StatelessWidget {
   }
 
   Widget _buildPostImage() {
+    if (imageBase64 != null && imageBase64!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(imageBase64!);
+        return Image.memory(
+          bytes,
+          height: 300,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              height: 300,
+              width: double.infinity,
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_not_supported, size: 50),
+            );
+          },
+        );
+      } catch (_) {
+        // Si la imagen local está dañada, seguimos con la imagen de respaldo.
+      }
+    }
+
     final isNetwork =
         imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
 

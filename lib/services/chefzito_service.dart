@@ -143,6 +143,7 @@ class ChefzitoService {
             userId: p['user_id'],
             recipeId: p['recipe_id'],
             description: p['description'],
+            imageBase64: p['image_base64'],
             likesCount: p['likes_count'],
             likedByMe: false,
             createdAt: DateTime.parse(p['created_at']),
@@ -183,7 +184,10 @@ class ChefzitoService {
     loaded = true;
   }
 
-  Future<String?> login({required String email, required String password}) async {
+  Future<String?> login({
+    required String email,
+    required String password,
+  }) async {
     await init();
 
     final cleanEmail = email.trim().toLowerCase();
@@ -195,7 +199,8 @@ class ChefzitoService {
 
     UserModel? matched;
     for (final user in users) {
-      if (user.email.toLowerCase().trim() == cleanEmail && user.password == cleanPassword) {
+      if (user.email.toLowerCase().trim() == cleanEmail &&
+          user.password == cleanPassword) {
         matched = user;
         break;
       }
@@ -276,7 +281,8 @@ class ChefzitoService {
       extracted.addAll(_extractIngredientsFromRecipe(recipe));
     }
 
-    final prettyExtracted = extracted.map(_capitalizeIngredient).toList()..sort();
+    final prettyExtracted = extracted.map(_capitalizeIngredient).toList()
+      ..sort();
 
     for (final ingredient in _fallbackIngredients) {
       if (!prettyExtracted.contains(ingredient)) {
@@ -287,7 +293,9 @@ class ChefzitoService {
     return prettyExtracted.take(limit).toList();
   }
 
-  List<RecipeModel> searchRecipesByIngredients(List<String> selectedIngredients) {
+  List<RecipeModel> searchRecipesByIngredients(
+    List<String> selectedIngredients,
+  ) {
     if (selectedIngredients.isEmpty) {
       return List<RecipeModel>.from(recipes);
     }
@@ -344,14 +352,44 @@ class ChefzitoService {
     return comments.where((c) => c.postId == postId).toList();
   }
 
-  bool isFollowing(int userId) {
+  Set<int> getFollowingUserIds() {
     if (!isAuthenticated) {
-      return false;
+      return <int>{};
     }
-    return follows.any(
-      (follow) =>
-          follow.followerId == _effectiveCurrentUserId && follow.followingId == userId,
-    );
+
+    final currentUserId = _effectiveCurrentUserId;
+    final followingIds = <int>{};
+    for (final follow in follows) {
+      if (follow.followerId == currentUserId) {
+        followingIds.add(follow.followingId);
+      }
+    }
+    return followingIds;
+  }
+
+  Set<int> getMutualFollowUserIds() {
+    if (!isAuthenticated) {
+      return <int>{};
+    }
+
+    final currentUserId = _effectiveCurrentUserId;
+    final followingIds = <int>{};
+    final followerIds = <int>{};
+
+    for (final follow in follows) {
+      if (follow.followerId == currentUserId) {
+        followingIds.add(follow.followingId);
+      }
+      if (follow.followingId == currentUserId) {
+        followerIds.add(follow.followerId);
+      }
+    }
+
+    return followingIds.intersection(followerIds);
+  }
+
+  bool isFollowing(int userId) {
+    return getFollowingUserIds().contains(userId);
   }
 
   bool isFollowedBy(int userId) {
@@ -360,12 +398,13 @@ class ChefzitoService {
     }
     return follows.any(
       (follow) =>
-          follow.followerId == userId && follow.followingId == _effectiveCurrentUserId,
+          follow.followerId == userId &&
+          follow.followingId == _effectiveCurrentUserId,
     );
   }
 
   bool isMutualFollow(int userId) {
-    return isFollowing(userId) && isFollowedBy(userId);
+    return getMutualFollowUserIds().contains(userId);
   }
 
   void toggleFollow(int userId) {
@@ -375,7 +414,8 @@ class ChefzitoService {
 
     final index = follows.indexWhere(
       (follow) =>
-          follow.followerId == _effectiveCurrentUserId && follow.followingId == userId,
+          follow.followerId == _effectiveCurrentUserId &&
+          follow.followingId == userId,
     );
 
     if (index != -1) {
@@ -388,15 +428,21 @@ class ChefzitoService {
   }
 
   List<PostModel> getPublicPosts() {
-    return posts.where((post) => !isMutualFollow(post.userId)).toList();
+    final mutualFollowIds = getMutualFollowUserIds();
+    return posts
+        .where((post) => !mutualFollowIds.contains(post.userId))
+        .toList();
   }
 
   List<PostModel> getFriendsPosts() {
-    return posts.where((post) => isMutualFollow(post.userId)).toList();
+    final mutualFollowIds = getMutualFollowUserIds();
+    return posts
+        .where((post) => mutualFollowIds.contains(post.userId))
+        .toList();
   }
 
   // CREATE
-  void addPost(String description, int recipeId) {
+  void addPost(String description, int recipeId, {String? imageBase64}) {
     final userId = _effectiveCurrentUserId;
     posts.add(
       PostModel(
@@ -404,6 +450,7 @@ class ChefzitoService {
         userId: userId,
         recipeId: recipeId,
         description: description,
+        imageBase64: imageBase64,
         likesCount: 0,
         likedByMe: false,
         createdAt: DateTime.now(),
@@ -454,7 +501,8 @@ class ChefzitoService {
 
   Set<String> _extractIngredientsFromRecipe(RecipeModel recipe) {
     final source =
-        '${recipe.title} ${recipe.description} ${recipe.steps.join(' ')}'.toLowerCase();
+        '${recipe.title} ${recipe.description} ${recipe.steps.join(' ')}'
+            .toLowerCase();
     final found = <String>{};
 
     for (final keyword in _ingredientVocabulary) {
