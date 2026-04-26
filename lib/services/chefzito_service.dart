@@ -19,6 +19,42 @@ class ChefzitoService {
 
   final int currentUserId = 1;
 
+  final List<String> _ingredientVocabulary = [
+    'pollo',
+    'pasta',
+    'tomate',
+    'cebolla',
+    'ajo',
+    'arroz',
+    'huevo',
+    'huevos',
+    'queso',
+    'leche',
+    'pan',
+    'aceite',
+    'sal',
+    'res',
+    'carne',
+    'tortilla',
+    'vegetales',
+    'salsa',
+  ];
+
+  final List<String> _fallbackIngredients = const [
+    'Pollo',
+    'Pasta',
+    'Tomate',
+    'Cebolla',
+    'Ajo',
+    'Arroz',
+    'Huevos',
+    'Queso',
+    'Leche',
+    'Pan',
+    'Aceite',
+    'Sal',
+  ];
+
   bool loaded = false;
 
   // Carga datos iniciales desde assets
@@ -109,6 +145,58 @@ class ChefzitoService {
   List<PostModel> getPosts() => posts;
 
   List<RecipeModel> getRecipes() => recipes;
+
+  List<String> getCommonIngredients({int limit = 12}) {
+    final extracted = <String>{};
+
+    for (final recipe in recipes) {
+      extracted.addAll(_extractIngredientsFromRecipe(recipe));
+    }
+
+    final prettyExtracted = extracted.map(_capitalizeIngredient).toList()..sort();
+
+    for (final ingredient in _fallbackIngredients) {
+      if (!prettyExtracted.contains(ingredient)) {
+        prettyExtracted.add(ingredient);
+      }
+    }
+
+    return prettyExtracted.take(limit).toList();
+  }
+
+  List<RecipeModel> searchRecipesByIngredients(List<String> selectedIngredients) {
+    if (selectedIngredients.isEmpty) {
+      return List<RecipeModel>.from(recipes);
+    }
+
+    final normalizedSelected = selectedIngredients
+        .map(_normalizeIngredient)
+        .where((i) => i.isNotEmpty)
+        .toSet();
+
+    final scored = <MapEntry<RecipeModel, int>>[];
+
+    for (final recipe in recipes) {
+      final recipeIngredients = _extractIngredientsFromRecipe(recipe);
+      final matches = normalizedSelected
+          .where((ingredient) => recipeIngredients.contains(ingredient))
+          .length;
+
+      if (matches > 0) {
+        scored.add(MapEntry(recipe, matches));
+      }
+    }
+
+    scored.sort((a, b) {
+      final scoreCompare = b.value.compareTo(a.value);
+      if (scoreCompare != 0) {
+        return scoreCompare;
+      }
+      return a.key.prepTimeMin.compareTo(b.key.prepTimeMin);
+    });
+
+    return scored.map((entry) => entry.key).toList();
+  }
 
   List<TrendModel> getTrends() => trends;
 
@@ -225,5 +313,43 @@ class ChefzitoService {
       post.likesCount += 1;
       post.likedByMe = true;
     }
+  }
+
+  Set<String> _extractIngredientsFromRecipe(RecipeModel recipe) {
+    final source =
+        '${recipe.title} ${recipe.description} ${recipe.steps.join(' ')}'.toLowerCase();
+    final found = <String>{};
+
+    for (final keyword in _ingredientVocabulary) {
+      if (source.contains(keyword)) {
+        found.add(_normalizeIngredient(keyword));
+      }
+    }
+
+    return found;
+  }
+
+  String _normalizeIngredient(String value) {
+    var normalized = value.toLowerCase().trim();
+    normalized = normalized
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+
+    if (normalized == 'huevo') {
+      return 'huevos';
+    }
+
+    return normalized;
+  }
+
+  String _capitalizeIngredient(String value) {
+    final normalized = _normalizeIngredient(value);
+    if (normalized.isEmpty) {
+      return normalized;
+    }
+    return normalized[0].toUpperCase() + normalized.substring(1);
   }
 }
