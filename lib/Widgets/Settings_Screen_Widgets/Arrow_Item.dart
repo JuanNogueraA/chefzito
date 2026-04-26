@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 class ArrowItem extends StatelessWidget {
   final String title;
   final bool isLast;
+  final VoidCallback? onTap;
 
-  const ArrowItem({Key? key, required this.title, this.isLast = false}) : super(key: key);
+  const ArrowItem({Key? key, required this.title, this.isLast = false, this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: Padding(
         padding: EdgeInsets.only(left: 20, right: 20, top: 15, bottom: isLast ? 20 : 15),
         child: Row(

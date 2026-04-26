@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // Importa la pantalla de búsqueda, ajusta la ruta si es necesario
-import '../../Screens/Community_Search_Screen.dart'; 
+import 'package:chefzito/Screens/Community/Community_Search_Screen.dart'; 
 
 class CommunityHeader extends StatelessWidget {
   final bool isPublicTab;

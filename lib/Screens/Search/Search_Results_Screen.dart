@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/recipe_model.dart';
-import 'Recipe_Detail_Screen.dart';
+import 'package:chefzito/models/recipe_model.dart';
+import 'package:chefzito/Screens/Search/Recipe_Detail_Screen.dart';
 
 class SearchResultsScreen extends StatelessWidget {
   final List<String> selectedIngredients;

@@ -19,15 +19,25 @@ class CuentaCard extends StatelessWidget {
 }
 
 class PreferenciasCard extends StatelessWidget {
-  const PreferenciasCard({Key? key}) : super(key: key);
+  final VoidCallback onThemeTap;
+  final VoidCallback onLanguageTap;
+  final VoidCallback onUnitsTap;
+
+  const PreferenciasCard({
+    Key? key,
+    required this.onThemeTap,
+    required this.onLanguageTap,
+    required this.onUnitsTap,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return const SectionContainer(
+    return SectionContainer(
       icon: Icons.palette_outlined, iconColor: Colors.purple, title: "Preferencias",
       children: [
-        ArrowItem(title: "Tema y Apariencia"), SettingsDivider(),
-        ArrowItem(title: "Idioma"), SettingsDivider(),
-        ArrowItem(title: "Unidades de Medida", isLast: true),
+        ArrowItem(title: "Tema y Apariencia", onTap: onThemeTap), SettingsDivider(),
+        ArrowItem(title: "Idioma", onTap: onLanguageTap), SettingsDivider(),
+        ArrowItem(title: "Unidades de Medida", onTap: onUnitsTap, isLast: true),
       ],
     );
   }
@@ -49,15 +59,25 @@ class AyudaCard extends StatelessWidget {
 }
 
 class InformacionCard extends StatelessWidget {
-  const InformacionCard({Key? key}) : super(key: key);
+  final VoidCallback onAboutTap;
+  final VoidCallback onTermsTap;
+  final VoidCallback onPrivacyTap;
+
+  const InformacionCard({
+    Key? key,
+    required this.onAboutTap,
+    required this.onTermsTap,
+    required this.onPrivacyTap,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return const SectionContainer(
+    return SectionContainer(
       icon: Icons.info_outline, iconColor: Colors.deepOrange, title: "Información",
       children: [
-        ArrowItem(title: "Acerca de Chefzito"), SettingsDivider(),
-        ArrowItem(title: "Términos y Condiciones"), SettingsDivider(),
-        ArrowItem(title: "Política de Privacidad", isLast: true),
+        ArrowItem(title: "Acerca de Chefzito", onTap: onAboutTap), SettingsDivider(),
+        ArrowItem(title: "Términos y Condiciones", onTap: onTermsTap), SettingsDivider(),
+        ArrowItem(title: "Política de Privacidad", onTap: onPrivacyTap, isLast: true),
       ],
     );
   }

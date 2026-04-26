@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../Screens/Search_Results_Screen.dart';
-import '../Widgets/NavBar.dart';
-import '../services/chefzito_service.dart';
+import 'package:chefzito/Screens/Search/Search_Results_Screen.dart';
+import 'package:chefzito/Widgets/NavBar.dart';
+import 'package:chefzito/services/chefzito_service.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});

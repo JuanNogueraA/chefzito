@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/recipe_model.dart';
-import '../Screens/Community_Screen.dart';
-import '../Screens/Rankings_Screen.dart';
-import '../Screens/Search_Screen.dart';
-import '../Widgets/NavBar.dart';
-import '../services/chefzito_service.dart';
+import 'package:chefzito/models/recipe_model.dart';
+import 'package:chefzito/Screens/Community/Community_Screen.dart';
+import 'package:chefzito/Screens/Rankings/Rankings_Screen.dart';
+import 'package:chefzito/Screens/Search/Search_Screen.dart';
+import 'package:chefzito/Widgets/NavBar.dart';
+import 'package:chefzito/services/chefzito_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

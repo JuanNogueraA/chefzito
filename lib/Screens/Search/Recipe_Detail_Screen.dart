@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/recipe_model.dart';
+import 'package:chefzito/models/recipe_model.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final RecipeModel recipe;

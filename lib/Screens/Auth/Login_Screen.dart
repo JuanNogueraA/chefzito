@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-import '../services/chefzito_service.dart';
+import 'package:chefzito/services/chefzito_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
