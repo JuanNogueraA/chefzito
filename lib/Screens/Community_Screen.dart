@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/chefzito_service.dart';
 import '../Widgets/NavBar.dart';
-// ¡Importamos nuestras nuevas piezas de Lego!
 import '../Widgets/Community_Screen_Widgets/Community_Header.dart';
 import '../Widgets/Community_Screen_Widgets/Comments_Bottom_Sheet.dart';
 import '../Widgets/Community_Screen_Widgets/Friends_Stories.dart';
@@ -9,7 +8,7 @@ import '../Widgets/Community_Screen_Widgets/Create_Post_Modal.dart';
 import '../Widgets/Community_Screen_Widgets/Post_Card.dart';
 
 class CommunityScreen extends StatefulWidget {
-  const CommunityScreen({Key? key}) : super(key: key);
+  const CommunityScreen({super.key});
 
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();

@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import '../Widgets/Settings_Screen_Widgets/Notificaciones_Card.dart';
 import '../Widgets/Settings_Screen_Widgets/Privacidad_Card.dart';
 import '../Widgets/Settings_Screen_Widgets/Settings_Menu_Cards.dart';
+import '../Widgets/NavBar.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +94,7 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+      bottomNavigationBar: const Navbar(),
     );
   }
 }
