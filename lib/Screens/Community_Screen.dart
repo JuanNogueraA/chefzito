@@ -20,6 +20,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
   final ChefzitoService _service = ChefzitoService();
   late final Future<void> _loadFuture;
 
+  String _displayChefName() {
+    final raw = _service.currentChefName.trim();
+    if (raw.isEmpty) {
+      return 'Invitado';
+    }
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -80,11 +88,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
+          // nombre del usuario autenticado
           // 1. EL HEADER LIMPIO
           CommunityHeader(
             isPublicTab: isPublicTab,
             primaryColor: primaryColor,
             secondaryColor: secondaryColor,
+            chefName: _displayChefName(),
             onTabChanged: (bool isPublic) {
               setState(() => isPublicTab = isPublic);
             },

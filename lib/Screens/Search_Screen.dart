@@ -28,6 +28,14 @@ class _SearchScreenState extends State<SearchScreen> {
     _loadFuture = _service.init();
   }
 
+  String _displayChefName() {
+    final raw = _service.currentChefName.trim();
+    if (raw.isEmpty) {
+      return 'Invitado';
+    }
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+
   @override
   void dispose() {
     _ingredientController.dispose();
@@ -318,6 +326,7 @@ class _SearchScreenState extends State<SearchScreen> {
           }
 
           final commonIngredients = _service.getCommonIngredients();
+          final chefName = _displayChefName();
 
           return Stack(
             children: [
@@ -343,6 +352,15 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    Text(
+                      'Chef $chefName, elige tus ingredientes 👨‍🍳',
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     const Text(
                       '¿Qué tienes en casa?',
                       style: TextStyle(

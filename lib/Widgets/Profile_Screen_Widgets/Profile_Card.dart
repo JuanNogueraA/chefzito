@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 
 class ProfileCard extends StatelessWidget {
   final VoidCallback onEditProfile; // Función para abrir el modal
+  final String userName;
+  final String userHandle;
 
-  const ProfileCard({Key? key, required this.onEditProfile}) : super(key: key);
+  const ProfileCard({
+    Key? key,
+    required this.onEditProfile,
+    required this.userName,
+    required this.userHandle,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +37,8 @@ class ProfileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Chef Viajero", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    Text("@chefviajero", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(userHandle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: onEditProfile,

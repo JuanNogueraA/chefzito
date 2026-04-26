@@ -7,6 +7,7 @@ class CommunityHeader extends StatelessWidget {
   final Color primaryColor;
   final Color secondaryColor;
   final ValueChanged<bool> onTabChanged; // Función para cambiar la pestaña
+  final String chefName;
 
   const CommunityHeader({
     Key? key,
@@ -14,6 +15,7 @@ class CommunityHeader extends StatelessWidget {
     required this.primaryColor,
     required this.secondaryColor,
     required this.onTabChanged,
+    required this.chefName,
   }) : super(key: key);
 
   @override
@@ -40,7 +42,7 @@ class CommunityHeader extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Comunidad", style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  Text("Comunidad Chef $chefName", style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                   Text(
                     isPublicTab ? "Descubre recetas de toda la comunidad" : "4 amigos cercanos", 
                     style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)

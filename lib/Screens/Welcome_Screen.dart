@@ -226,7 +226,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   Widget _buildTitle() {
     return const Text(
-      'Chefcito',
+      'Chefzito',
       style: TextStyle(
         fontSize: 56,
         fontWeight: FontWeight.bold,

@@ -10,6 +10,14 @@ import '../models/user_model.dart';
 
 // Servicio que simula backend con JSON + memoria
 class ChefzitoService {
+  static final ChefzitoService _instance = ChefzitoService._internal();
+
+  factory ChefzitoService() {
+    return _instance;
+  }
+
+  ChefzitoService._internal();
+
   List<PostModel> posts = [];
   List<UserModel> users = [];
   List<CommentModel> comments = [];
@@ -17,7 +25,7 @@ class ChefzitoService {
   List<RecipeModel> recipes = [];
   List<TrendModel> trends = [];
 
-  final int currentUserId = 1;
+  int? _currentUserId;
 
   final List<String> _ingredientVocabulary = [
     'pollo',
@@ -57,6 +65,39 @@ class ChefzitoService {
 
   bool loaded = false;
 
+  int? get currentUserId => _currentUserId;
+
+  bool get isAuthenticated => _currentUserId != null;
+
+  UserModel? get currentUser {
+    final id = _currentUserId;
+    if (id == null) {
+      return null;
+    }
+
+    for (final user in users) {
+      if (user.id == id) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  String get currentChefName {
+    return currentUser?.username ?? 'Invitado';
+  }
+
+  int get _effectiveCurrentUserId {
+    final id = _currentUserId;
+    if (id != null) {
+      return id;
+    }
+    if (users.isNotEmpty) {
+      return users.first.id;
+    }
+    return 1;
+  }
+
   // Carga datos iniciales desde assets
   Future<void> init() async {
     if (loaded) return;
@@ -72,6 +113,7 @@ class ChefzitoService {
             id: u['id'],
             username: u['username'],
             email: u['email'],
+            password: u['password'] ?? '',
             avatarUrl: u['avatar_url'],
             createdAt: DateTime.parse(u['created_at']),
           ),
@@ -139,6 +181,87 @@ class ChefzitoService {
         .toList();
 
     loaded = true;
+  }
+
+  Future<String?> login({required String email, required String password}) async {
+    await init();
+
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanPassword = password.trim();
+
+    if (cleanEmail.isEmpty || cleanPassword.isEmpty) {
+      return 'Completa email y contraseña.';
+    }
+
+    UserModel? matched;
+    for (final user in users) {
+      if (user.email.toLowerCase().trim() == cleanEmail && user.password == cleanPassword) {
+        matched = user;
+        break;
+      }
+    }
+
+    if (matched == null) {
+      return 'Credenciales inválidas.';
+    }
+
+    _currentUserId = matched.id;
+    return null;
+  }
+
+  Future<String?> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    await init();
+
+    final cleanName = username.trim();
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanPassword = password.trim();
+
+    if (cleanName.isEmpty || cleanEmail.isEmpty || cleanPassword.isEmpty) {
+      return 'Completa todos los campos.';
+    }
+
+    if (!cleanEmail.contains('@') || !cleanEmail.contains('.')) {
+      return 'Ingresa un email válido.';
+    }
+
+    if (cleanPassword.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
+
+    final alreadyExists = users.any(
+      (user) => user.email.toLowerCase().trim() == cleanEmail,
+    );
+
+    if (alreadyExists) {
+      return 'Ese email ya está registrado.';
+    }
+
+    final nextId = users.isEmpty
+        ? 1
+        : users.map((user) => user.id).reduce((a, b) => a > b ? a : b) + 1;
+
+    final usernameNoSpaces = cleanName.toLowerCase().replaceAll(' ', '');
+
+    final newUser = UserModel(
+      id: nextId,
+      username: usernameNoSpaces,
+      email: cleanEmail,
+      password: cleanPassword,
+      avatarUrl: 'assets/img/avatar1.png',
+      createdAt: DateTime.now(),
+    );
+
+    users.add(newUser);
+    _currentUserId = newUser.id;
+    return null;
+  }
+
+  void logout() {
+    _currentUserId = null;
   }
 
   // READ
@@ -222,16 +345,22 @@ class ChefzitoService {
   }
 
   bool isFollowing(int userId) {
+    if (!isAuthenticated) {
+      return false;
+    }
     return follows.any(
       (follow) =>
-          follow.followerId == currentUserId && follow.followingId == userId,
+          follow.followerId == _effectiveCurrentUserId && follow.followingId == userId,
     );
   }
 
   bool isFollowedBy(int userId) {
+    if (!isAuthenticated) {
+      return false;
+    }
     return follows.any(
       (follow) =>
-          follow.followerId == userId && follow.followingId == currentUserId,
+          follow.followerId == userId && follow.followingId == _effectiveCurrentUserId,
     );
   }
 
@@ -240,15 +369,21 @@ class ChefzitoService {
   }
 
   void toggleFollow(int userId) {
+    if (!isAuthenticated) {
+      return;
+    }
+
     final index = follows.indexWhere(
       (follow) =>
-          follow.followerId == currentUserId && follow.followingId == userId,
+          follow.followerId == _effectiveCurrentUserId && follow.followingId == userId,
     );
 
     if (index != -1) {
       follows.removeAt(index);
     } else {
-      follows.add(FollowModel(followerId: currentUserId, followingId: userId));
+      follows.add(
+        FollowModel(followerId: _effectiveCurrentUserId, followingId: userId),
+      );
     }
   }
 
@@ -262,10 +397,11 @@ class ChefzitoService {
 
   // CREATE
   void addPost(String description, int recipeId) {
+    final userId = _effectiveCurrentUserId;
     posts.add(
       PostModel(
         id: posts.isEmpty ? 1 : posts.last.id + 1,
-        userId: 1,
+        userId: userId,
         recipeId: recipeId,
         description: description,
         likesCount: 0,
@@ -276,11 +412,12 @@ class ChefzitoService {
   }
 
   void addComment(int postId, String content) {
+    final userId = _effectiveCurrentUserId;
     comments.add(
       CommentModel(
         id: comments.isEmpty ? 1 : comments.last.id + 1,
         postId: postId,
-        userId: 1,
+        userId: userId,
         content: content,
         createdAt: DateTime.now(),
       ),

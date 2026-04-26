@@ -18,6 +18,14 @@ class _HomeScreenState extends State<HomeScreen> {
   late final Future<void> _loadFuture;
   bool _showContent = false;
 
+  String _displayChefName() {
+    final raw = _service.currentChefName.trim();
+    if (raw.isEmpty) {
+      return 'Invitado';
+    }
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final topRecipes = _topRecipes();
           final trends = _service.getTrends();
+          final chefName = _displayChefName();
 
           return Column(
             children: [
@@ -131,17 +140,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
-                                '¡Hola Chef! 👋',
-                                style: TextStyle(
+                                '¡Hola Chef $chefName! 👋',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 33,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
-                              SizedBox(height: 6),
-                              Text(
+                              const SizedBox(height: 6),
+                              const Text(
                                 '¿Qué preparamos\npara hoy?',
                                 style: TextStyle(
                                   color: Colors.white,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+import '../services/chefzito_service.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -10,6 +12,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
+  final ChefzitoService _service = ChefzitoService();
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _floatController;
@@ -19,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLogin = true;
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -77,6 +82,54 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() {
       _isLogin = !_isLogin;
     });
+  }
+
+  Future<void> _submitAuth() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    String? error;
+
+    if (_isLogin) {
+      error = await _service.login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+    } else {
+      error = await _service.register(
+        username: _nameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: const Color(0xFFD32F2F)),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isLogin ? '¡Bienvenido de nuevo!' : 'Cuenta creada con éxito.'),
+      ),
+    );
+
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
   @override
@@ -197,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       children: [
         Text(
-          _isLogin ? '¡Bienvenido!' : 'Únete a Celtouille',
+          _isLogin ? '¡Bienvenido Chef!' : 'Únete a Chefzito',
           style: const TextStyle(
             fontSize: 44,
             fontWeight: FontWeight.w800,
@@ -358,6 +411,11 @@ class _LoginScreenState extends State<LoginScreen>
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
         ),
+        const SizedBox(height: 8),
+        const Text(
+          'Demo: juan@chefzito.com / chef1234',
+          style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
+        ),
         const SizedBox(height: 20),
         // Contraseña
         _buildFieldLabel('Contraseña'),
@@ -508,10 +566,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          // Lógica de login o registro
-          Navigator.pushReplacementNamed(context, '/home');
-        },
+        onTap: _submitAuth,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           width: double.infinity,
@@ -532,15 +587,25 @@ class _LoginScreenState extends State<LoginScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: 0.3,
+              if (_isSubmitting)
+                const SizedBox(
+                  width: 21,
+                  height: 21,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else
+                Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
               const SizedBox(width: 8),
               const Icon(Icons.arrow_forward, color: Colors.white, size: 22),
             ],
