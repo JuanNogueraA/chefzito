@@ -1,0 +1,116 @@
+import 'package:flutter/material.dart';
+
+class ProfileCard extends StatelessWidget {
+  final VoidCallback onEditProfile; // Función para abrir el modal
+  final String userName;
+  final String userHandle;
+
+  const ProfileCard({
+    Key? key,
+    required this.onEditProfile,
+    required this.userName,
+    required this.userHandle,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 35,
+                backgroundImage: NetworkImage('https://images.unsplash.com/photo-1577219491135-ce391730fb2c?q=80&w=200&auto=format&fit=crop'),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(userHandle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: onEditProfile,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFFFF5E00), Color(0xFFFF2A55)]),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Text("Editar Perfil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            "🍳 Cocinero aficionado | 🌍 Explorando sabores del mundo | ✨ Compartiendo recetas fáciles",
+            style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text("Madrid, España", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: Color(0xFFEEEEEE), thickness: 1),
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem("23", "Recetas"),
+              _buildStatItem("1240", "Seguidores"),
+              _buildStatItem("340", "Siguiendo"),
+              _buildStatItem("5670", "Likes"),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildBadge("🏆 Top Chef", Colors.amber),
+              _buildBadge("🔥 En Racha", Colors.deepOrange),
+              _buildBadge("⭐ Innovador", Colors.purpleAccent),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Métodos privados que solo se usan dentro de ProfileCard
+  Widget _buildStatItem(String number, String label) {
+    return Column(
+      children: [
+        Text(number, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+      ],
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
+    );
+  }
+}

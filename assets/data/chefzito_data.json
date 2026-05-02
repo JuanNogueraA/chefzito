@@ -1,0 +1,161 @@
+{
+  "usuarios": [
+    {
+      "id": 1,
+      "username": "chefjuan",
+      "email": "juan@chefzito.com",
+      "password": "chef1234",
+      "avatar_url": "assets/img/avatar1.png",
+      "created_at": "2026-04-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "username": "mariacocina",
+      "email": "maria@chefzito.com",
+      "password": "maria1234",
+      "avatar_url": "assets/img/avatar2.png",
+      "created_at": "2026-04-02T11:00:00Z"
+    },
+    {
+      "id": 3,
+      "username": "luisgrill",
+      "email": "luis@chefzito.com",
+      "password": "luis1234",
+      "avatar_url": "assets/img/avatar3.png",
+      "created_at": "2026-04-03T12:00:00Z"
+    }
+  ],
+  "recetas": [
+    {
+      "id": 1,
+      "author_id": 1,
+      "title": "Pasta Alfredo",
+      "description": "Pasta cremosa en 20 minutos",
+      "cover_image_url": "assets/img/recipe1.png",
+      "steps": [
+        "Llena una olla grande con agua, agrega una cucharada de sal y lleva a hervor fuerte.",
+        "Cuando el agua hierva, agrega la pasta y cocinala al dente segun el tiempo del paquete.",
+        "Antes de colar, reserva una taza del agua de coccion para ajustar la salsa al final.",
+        "En una sarten amplia, derrite mantequilla a fuego medio sin dejar que se queme.",
+        "Anade ajo finamente picado y cocina 30 segundos hasta que suelte aroma.",
+        "Incorpora crema de leche, mezcla bien y cocina 2 minutos para que tome cuerpo.",
+        "Agrega queso parmesano rallado poco a poco, revolviendo para lograr una salsa lisa.",
+        "Sazona con sal, pimienta y una pizca de nuez moscada; ajusta textura con agua de pasta.",
+        "Pasa la pasta cocida a la sarten, mezcla durante 1 minuto y sirve caliente con mas parmesano."
+      ],
+      "prep_time_min": 20,
+      "difficulty": "facil",
+      "generated_by_ai": false
+    },
+    {
+      "id": 2,
+      "author_id": 2,
+      "title": "Ensalada Mediterranea",
+      "description": "Fresca y saludable",
+      "cover_image_url": "assets/img/recipe2.png",
+      "steps": [
+        "Lava bien tomate, pepino, pimiento y hojas verdes con agua fria y escurre por completo.",
+        "Corta los tomates en cubos medianos y el pepino en medias lunas finas.",
+        "Corta cebolla morada en pluma delgada y dejala 5 minutos en agua fria para suavizar sabor.",
+        "Pica pimiento rojo en tiras cortas y desmenuza queso feta en trozos pequenos.",
+        "En un bowl grande coloca hojas verdes, tomate, pepino, cebolla y pimiento.",
+        "Anade aceitunas negras y mezcla suavemente para no romper los ingredientes.",
+        "Prepara un aderezo con aceite de oliva, jugo de limon, oregano seco, sal y pimienta.",
+        "Vierte el aderezo sobre la ensalada y mezcla con movimientos envolventes.",
+        "Termina con queso feta por encima y deja reposar 3 minutos antes de servir."
+      ],
+      "prep_time_min": 15,
+      "difficulty": "facil",
+      "generated_by_ai": true
+    },
+    {
+      "id": 3,
+      "author_id": 3,
+      "title": "Tacos de Res",
+      "description": "Tacos caseros para la cena",
+      "cover_image_url": "assets/img/recipe3.png",
+      "steps": [
+        "Corta la carne de res en tiras finas y secala con papel para que dore mejor.",
+        "Mezcla en un bowl ajo picado, comino, paprika, sal, pimienta y un chorrito de aceite.",
+        "Agrega la carne al adobo y deja reposar al menos 10 minutos para potenciar sabor.",
+        "Calienta una sarten grande a fuego alto y cocina la carne en tandas para evitar humedad.",
+        "Cuando la carne este dorada, baja a fuego medio y agrega cebolla picada y pimiento.",
+        "Cocina 3 minutos mas hasta que la cebolla este suave y corrige sal al gusto.",
+        "Calienta tortillas en comal o sarten seca, 20 segundos por lado, y mantenlas tapadas.",
+        "Arma cada taco con carne, cilantro, cebolla fresca y unas gotas de limon.",
+        "Sirve con salsa al gusto y acompana con guacamole o frijoles para una cena completa."
+      ],
+      "prep_time_min": 25,
+      "difficulty": "media",
+      "generated_by_ai": false
+    }
+  ],
+  "publicaciones": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "recipe_id": 1,
+      "description": "Mi pasta favorita para hoy",
+      "likes_count": 5,
+      "created_at": "2026-04-10T16:00:00Z"
+    },
+    {
+      "id": 2,
+      "user_id": 2,
+      "recipe_id": 2,
+      "description": "Comida ligera para la tarde",
+      "likes_count": 3,
+      "created_at": "2026-04-11T13:30:00Z"
+    },
+    {
+      "id": 3,
+      "user_id": 3,
+      "recipe_id": 3,
+      "description": "Mi cena de hoy",
+      "likes_count": 7,
+      "created_at": "2026-04-12T19:00:00Z"
+    }
+  ],
+  "comentarios": [
+    {
+      "id": 1,
+      "post_id": 1,
+      "user_id": 2,
+      "content": "Se ve deliciosa",
+      "created_at": "2026-04-10T16:40:00Z"
+    },
+    {
+      "id": 2,
+      "post_id": 2,
+      "user_id": 1,
+      "content": "La voy a probar",
+      "created_at": "2026-04-11T14:10:00Z"
+    }
+  ],
+  "seguimientos": [
+    {
+      "follower_id": 1,
+      "following_id": 2
+    },
+    {
+      "follower_id": 2,
+      "following_id": 1
+    },
+    {
+      "follower_id": 1,
+      "following_id": 3
+    }
+  ],
+  "tendencias": [
+    {
+      "id": 1,
+      "hashtag": "#Pasta",
+      "count": 22
+    },
+    {
+      "id": 2,
+      "hashtag": "#Healthy",
+      "count": 18
+    }
+  ]
+}
