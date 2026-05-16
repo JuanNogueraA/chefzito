@@ -305,6 +305,181 @@ class ChefzitoService {
     return prettyExtracted.take(limit).toList();
   }
 
+  Future<List<String>> detectIngredientsFromImage(
+    Uint8List imageBytes, {
+    int maxIngredients = 10,
+  }) async {
+    final encoded = base64Encode(imageBytes);
+    final response = await _client.functions.invoke(
+      'gemini-proxy',
+      body: {
+        'imageBase64': encoded,
+        'mimeType': 'image/jpeg',
+        'maxIngredients': maxIngredients,
+      },
+    );
+
+    if (response.status >= 400) {
+      throw Exception('Error IA: ${response.status}');
+    }
+
+    dynamic payload = response.data;
+    if (payload is String) {
+      payload = jsonDecode(payload);
+    }
+
+    if (payload is! Map<String, dynamic>) {
+      return [];
+    }
+
+    final candidates = payload['candidates'];
+    if (candidates is! List || candidates.isEmpty) {
+      return [];
+    }
+
+    final content = candidates.first is Map<String, dynamic>
+        ? (candidates.first as Map<String, dynamic>)['content']
+        : null;
+    if (content is! Map<String, dynamic>) {
+      return [];
+    }
+
+    final parts = content['parts'];
+    if (parts is! List || parts.isEmpty) {
+      return [];
+    }
+
+    final text = parts.first is Map<String, dynamic>
+        ? (parts.first as Map<String, dynamic>)['text']
+        : null;
+    if (text is! String || text.trim().isEmpty) {
+      return [];
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(text);
+    } catch (_) {
+      return [];
+    }
+
+    if (decoded is! Map<String, dynamic>) {
+      return [];
+    }
+
+    final ingredients = decoded['ingredients'];
+    if (ingredients is! List) {
+      return [];
+    }
+
+    return ingredients
+        .whereType<String>()
+        .map(_capitalizeIngredient)
+        .where((ingredient) => ingredient.isNotEmpty)
+        .toSet()
+        .take(maxIngredients)
+        .toList();
+  }
+
+  Future<Map<String, dynamic>?> generateRecipeFromIngredients(
+    List<String> ingredients, {
+    int maxSteps = 6,
+  }) async {
+    if (ingredients.isEmpty) {
+      return null;
+    }
+
+    final response = await _client.functions.invoke(
+      'gemini-proxy',
+      body: {
+        'mode': 'recipe',
+        'ingredients': ingredients,
+        'maxSteps': maxSteps,
+      },
+    );
+
+    if (response.status >= 400) {
+      throw Exception('Error IA: ${response.status}');
+    }
+
+    dynamic payload = response.data;
+    if (payload is String) {
+      payload = jsonDecode(payload);
+    }
+
+    if (payload is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final candidates = payload['candidates'];
+    if (candidates is! List || candidates.isEmpty) {
+      return null;
+    }
+
+    final content = candidates.first is Map<String, dynamic>
+        ? (candidates.first as Map<String, dynamic>)['content']
+        : null;
+    if (content is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final parts = content['parts'];
+    if (parts is! List || parts.isEmpty) {
+      return null;
+    }
+
+    final text = parts.first is Map<String, dynamic>
+        ? (parts.first as Map<String, dynamic>)['text']
+        : null;
+    if (text is! String || text.trim().isEmpty) {
+      return null;
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(text);
+    } catch (_) {
+      return null;
+    }
+
+    if (decoded is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final title = (decoded['title'] as String?)?.trim() ?? '';
+    final description = (decoded['description'] as String?)?.trim() ?? '';
+    final prepTime = decoded['prepTimeMin'];
+    final difficulty = (decoded['difficulty'] as String?)?.trim() ?? 'easy';
+    final stepsRaw = decoded['steps'];
+    final ingredientsRaw = decoded['ingredients'];
+
+    final steps = stepsRaw is List
+        ? stepsRaw.whereType<String>().map((step) => step.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    final ingredientList = ingredientsRaw is List
+        ? ingredientsRaw
+            .whereType<String>()
+            .map(_capitalizeIngredient)
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[];
+
+    return {
+      'title': title.isEmpty ? 'Receta Chefzito' : title,
+      'description': description.isEmpty ? 'Receta creada con IA en Chefzito.' : description,
+      'prepTimeMin': prepTime is int ? prepTime : int.tryParse(prepTime?.toString() ?? '') ?? 20,
+      'difficulty': difficulty.isEmpty ? 'easy' : difficulty,
+      'steps': steps.isEmpty
+          ? const [
+              'Prepara los ingredientes y corta en porciones medianas.',
+              'Cocina a fuego medio hasta lograr el punto deseado.',
+              'Sirve caliente y disfruta.',
+            ]
+          : steps,
+      'ingredients': ingredientList,
+    };
+  }
+
   List<MapEntry<String, int>> getIngredientRanking({int limit = 8}) {
     final counts = <String, int>{};
 

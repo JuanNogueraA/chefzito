@@ -91,24 +91,28 @@ Future<void> showCreatePostModal({
 
   final postData = await showModalBottomSheet<CreatePostData>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (modalContext) {
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setModalState) {
-          final size = MediaQuery.of(context).size;
+          final mediaQuery = MediaQuery.of(context);
+          final size = mediaQuery.size;
           final isWide = size.width >= 520;
           final imageHeight = isWide ? 220.0 : 180.0;
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+          return SafeArea(
+            child: Container(
+              height: size.height * 0.9,
+              margin: const EdgeInsets.only(top: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
               ),
-            ),
-            child: Column(
+              child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -189,6 +193,7 @@ Future<void> showCreatePostModal({
                           )
                         else
                           Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               PrivacyOption(
                                 icon: Icons.public,
@@ -677,7 +682,8 @@ Future<void> showCreatePostModal({
                 ),
               ],
             ),
-          );
+          ),
+        );
         },
       );
     },
