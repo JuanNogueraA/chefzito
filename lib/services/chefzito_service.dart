@@ -1,6 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'dart:typed_data';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../data/supabase_client.dart';
 import '../models/comment_model.dart';
 import '../models/follow_model.dart';
 import '../models/post_model.dart';
@@ -8,7 +11,7 @@ import '../models/recipe_model.dart';
 import '../models/trend_model.dart';
 import '../models/user_model.dart';
 
-// Servicio que simula backend con JSON + memoria
+// Servicio conectado a Supabase
 class ChefzitoService {
   static final ChefzitoService _instance = ChefzitoService._internal();
 
@@ -25,7 +28,9 @@ class ChefzitoService {
   List<RecipeModel> recipes = [];
   List<TrendModel> trends = [];
 
-  int? _currentUserId;
+  String? _currentUserId;
+
+  SupabaseClient get _client => SupabaseClientProvider.client;
 
   final List<String> _ingredientVocabulary = [
     'pollo',
@@ -65,7 +70,7 @@ class ChefzitoService {
 
   bool loaded = false;
 
-  int? get currentUserId => _currentUserId;
+  String? get currentUserId => _currentUserId;
 
   bool get isAuthenticated => _currentUserId != null;
 
@@ -87,7 +92,7 @@ class ChefzitoService {
     return currentUser?.username ?? 'Invitado';
   }
 
-  int get _effectiveCurrentUserId {
+  String? get _effectiveCurrentUserId {
     final id = _currentUserId;
     if (id != null) {
       return id;
@@ -95,101 +100,80 @@ class ChefzitoService {
     if (users.isNotEmpty) {
       return users.first.id;
     }
-    return 1;
+    return null;
   }
 
-  // Carga datos iniciales desde assets
+  Future<void> _loadCurrentUser() async {
+    _currentUserId = _client.auth.currentUser?.id;
+  }
+
+  // Carga datos iniciales desde Supabase
   Future<void> init() async {
     if (loaded) return;
 
-    final response = await rootBundle.loadString(
-      'assets/data/chefzito_data.json',
-    );
-    final data = json.decode(response);
+    await _loadCurrentUser();
 
-    users = (data['usuarios'] as List)
-        .map(
-          (u) => UserModel(
-            id: u['id'],
-            username: u['username'],
-            email: u['email'],
-            password: u['password'] ?? '',
-            avatarUrl: u['avatar_url'],
-            createdAt: DateTime.parse(u['created_at']),
-          ),
-        )
+    final usersResponse = await _client.from('users').select();
+    users = (usersResponse as List)
+        .map((user) => UserModel.fromJson(user as Map<String, dynamic>))
         .toList();
 
-    recipes = (data['recetas'] as List)
-        .map(
-          (r) => RecipeModel(
-            id: r['id'],
-            authorId: r['author_id'],
-            title: r['title'],
-            description: r['description'],
-            coverImageUrl: r['cover_image_url'],
-            steps: List<String>.from(r['steps']),
-            prepTimeMin: r['prep_time_min'],
-            difficulty: r['difficulty'],
-            generatedByAi: r['generated_by_ai'],
-          ),
-        )
+    final recipesResponse = await _client.from('recipes').select();
+    final stepsResponse = await _client.from('recipe_steps').select();
+
+    final stepsByRecipe = <String, List<String>>{};
+    for (final row in stepsResponse as List) {
+      final map = row as Map<String, dynamic>;
+      final recipeId = map['recipe_id'] as String;
+      final instruction = (map['instruction'] as String?) ?? '';
+      stepsByRecipe.putIfAbsent(recipeId, () => []).add(instruction);
+    }
+
+    recipes = (recipesResponse as List)
+        .map((recipe) {
+          final map = recipe as Map<String, dynamic>;
+          return RecipeModel.fromJson(
+            map,
+            steps: stepsByRecipe[map['id'] as String] ?? const [],
+          );
+        })
         .toList();
 
-    posts = (data['publicaciones'] as List)
-        .map(
-          (p) => PostModel(
-            id: p['id'],
-            userId: p['user_id'],
-            recipeId: p['recipe_id'],
-            description: p['description'],
-            imageBase64: p['image_base64'],
-            likesCount: p['likes_count'],
-            likedByMe: false,
-            createdAt: DateTime.parse(p['created_at']),
-          ),
-        )
+    final postsResponse = await _client
+        .from('posts')
+        .select()
+        .order('created_at', ascending: false);
+    posts = (postsResponse as List)
+        .map((post) => PostModel.fromJson(post as Map<String, dynamic>))
         .toList();
 
-    comments = (data['comentarios'] as List)
-        .map(
-          (c) => CommentModel(
-            id: c['id'],
-            postId: c['post_id'],
-            userId: c['user_id'],
-            content: c['content'],
-            createdAt: DateTime.parse(c['created_at']),
-          ),
-        )
+    final commentsResponse = await _client
+        .from('post_comments')
+        .select()
+        .order('created_at', ascending: true);
+    comments = (commentsResponse as List)
+        .map((comment) => CommentModel.fromJson(comment as Map<String, dynamic>))
         .toList();
 
-    follows =
-        (data['seguimientos'] as List?)
-            ?.map(
-              (f) => FollowModel(
-                followerId: f['follower_id'],
-                followingId: f['following_id'],
-              ),
-            )
-            .toList() ??
-        [];
-
-    trends = (data['tendencias'] as List)
-        .map(
-          (t) =>
-              TrendModel(id: t['id'], hashtag: t['hashtag'], count: t['count']),
-        )
+    final followsResponse = await _client.from('user_follows').select();
+    follows = (followsResponse as List)
+        .map((follow) => FollowModel.fromJson(follow as Map<String, dynamic>))
         .toList();
+
+    trends = [];
 
     loaded = true;
+
+    // Log temporal para verificar conexión con Supabase.
+    print(
+      'Supabase OK: users=${users.length}, recipes=${recipes.length}, posts=${posts.length}, comments=${comments.length}',
+    );
   }
 
   Future<String?> login({
     required String email,
     required String password,
   }) async {
-    await init();
-
     final cleanEmail = email.trim().toLowerCase();
     final cleanPassword = password.trim();
 
@@ -197,21 +181,19 @@ class ChefzitoService {
       return 'Completa email y contraseña.';
     }
 
-    UserModel? matched;
-    for (final user in users) {
-      if (user.email.toLowerCase().trim() == cleanEmail &&
-          user.password == cleanPassword) {
-        matched = user;
-        break;
-      }
+    try {
+      final response = await _client.auth.signInWithPassword(
+        email: cleanEmail,
+        password: cleanPassword,
+      );
+      _currentUserId = response.user?.id;
+      await init();
+      return null;
+    } on AuthException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'No fue posible iniciar sesión.';
     }
-
-    if (matched == null) {
-      return 'Credenciales inválidas.';
-    }
-
-    _currentUserId = matched.id;
-    return null;
   }
 
   Future<String?> register({
@@ -219,8 +201,6 @@ class ChefzitoService {
     required String email,
     required String password,
   }) async {
-    await init();
-
     final cleanName = username.trim();
     final cleanEmail = email.trim().toLowerCase();
     final cleanPassword = password.trim();
@@ -237,42 +217,72 @@ class ChefzitoService {
       return 'La contraseña debe tener al menos 6 caracteres.';
     }
 
-    final alreadyExists = users.any(
-      (user) => user.email.toLowerCase().trim() == cleanEmail,
-    );
-
-    if (alreadyExists) {
-      return 'Ese email ya está registrado.';
-    }
-
-    final nextId = users.isEmpty
-        ? 1
-        : users.map((user) => user.id).reduce((a, b) => a > b ? a : b) + 1;
-
     final usernameNoSpaces = cleanName.toLowerCase().replaceAll(' ', '');
 
-    final newUser = UserModel(
-      id: nextId,
-      username: usernameNoSpaces,
-      email: cleanEmail,
-      password: cleanPassword,
-      avatarUrl: 'assets/img/avatar1.png',
-      createdAt: DateTime.now(),
-    );
+    try {
+      final response = await _client.auth.signUp(
+        email: cleanEmail,
+        password: cleanPassword,
+      );
 
-    users.add(newUser);
-    _currentUserId = newUser.id;
-    return null;
+      final userId = response.user?.id;
+      if (userId != null) {
+        await _client.from('users').update({
+          'username': usernameNoSpaces,
+          'full_name': cleanName,
+        }).eq('id', userId);
+      }
+
+      _currentUserId = userId;
+      await init();
+      return null;
+    } on AuthException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'No fue posible crear la cuenta.';
+    }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    await _client.auth.signOut();
     _currentUserId = null;
+  }
+
+  Future<String?> uploadAvatar(Uint8List bytes) async {
+    final userId = _effectiveCurrentUserId;
+    if (userId == null) {
+      return null;
+    }
+
+    final filePath = 'user_$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final url = await _uploadImage(
+      bucket: 'avatars',
+      filePath: filePath,
+      bytes: bytes,
+    );
+
+    if (url == null) {
+      return null;
+    }
+
+    await _client.from('users').update({'avatar_url': url}).eq('id', userId);
+
+    for (final user in users) {
+      if (user.id == userId) {
+        user.avatarUrl = url;
+        break;
+      }
+    }
+
+    return url;
   }
 
   // READ
   List<PostModel> getPosts() => posts;
 
   List<RecipeModel> getRecipes() => recipes;
+
+  List<UserModel> getUsers() => users;
 
   List<String> getCommonIngredients({int limit = 12}) {
     final extracted = <String>{};
@@ -284,13 +294,31 @@ class ChefzitoService {
     final prettyExtracted = extracted.map(_capitalizeIngredient).toList()
       ..sort();
 
-    for (final ingredient in _fallbackIngredients) {
-      if (!prettyExtracted.contains(ingredient)) {
-        prettyExtracted.add(ingredient);
+    if (prettyExtracted.isEmpty) {
+      for (final ingredient in _fallbackIngredients) {
+        if (!prettyExtracted.contains(ingredient)) {
+          prettyExtracted.add(ingredient);
+        }
       }
     }
 
     return prettyExtracted.take(limit).toList();
+  }
+
+  List<MapEntry<String, int>> getIngredientRanking({int limit = 8}) {
+    final counts = <String, int>{};
+
+    for (final recipe in recipes) {
+      for (final ingredient in _extractIngredientsFromRecipe(recipe)) {
+        final pretty = _capitalizeIngredient(ingredient);
+        counts[pretty] = (counts[pretty] ?? 0) + 1;
+      }
+    }
+
+    final entries = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return entries.take(limit).toList();
   }
 
   List<RecipeModel> searchRecipesByIngredients(
@@ -331,15 +359,15 @@ class ChefzitoService {
 
   List<TrendModel> getTrends() => trends;
 
-  UserModel getUser(int id) {
+  UserModel getUser(String id) {
     return users.firstWhere((u) => u.id == id);
   }
 
-  RecipeModel getRecipe(int id) {
+  RecipeModel getRecipe(String id) {
     return recipes.firstWhere((r) => r.id == id);
   }
 
-  int? findRecipeIdByTitle(String title) {
+  String? findRecipeIdByTitle(String title) {
     for (final recipe in recipes) {
       if (recipe.title.toLowerCase().trim() == title.toLowerCase().trim()) {
         return recipe.id;
@@ -348,17 +376,20 @@ class ChefzitoService {
     return null;
   }
 
-  List<CommentModel> getCommentsByPost(int postId) {
+  List<CommentModel> getCommentsByPost(String postId) {
     return comments.where((c) => c.postId == postId).toList();
   }
 
-  Set<int> getFollowingUserIds() {
+  Set<String> getFollowingUserIds() {
     if (!isAuthenticated) {
-      return <int>{};
+      return <String>{};
     }
 
     final currentUserId = _effectiveCurrentUserId;
-    final followingIds = <int>{};
+    if (currentUserId == null) {
+      return <String>{};
+    }
+    final followingIds = <String>{};
     for (final follow in follows) {
       if (follow.followerId == currentUserId) {
         followingIds.add(follow.followingId);
@@ -367,14 +398,17 @@ class ChefzitoService {
     return followingIds;
   }
 
-  Set<int> getMutualFollowUserIds() {
+  Set<String> getMutualFollowUserIds() {
     if (!isAuthenticated) {
-      return <int>{};
+      return <String>{};
     }
 
     final currentUserId = _effectiveCurrentUserId;
-    final followingIds = <int>{};
-    final followerIds = <int>{};
+    if (currentUserId == null) {
+      return <String>{};
+    }
+    final followingIds = <String>{};
+    final followerIds = <String>{};
 
     for (final follow in follows) {
       if (follow.followerId == currentUserId) {
@@ -388,41 +422,57 @@ class ChefzitoService {
     return followingIds.intersection(followerIds);
   }
 
-  bool isFollowing(int userId) {
+  bool isFollowing(String userId) {
     return getFollowingUserIds().contains(userId);
   }
 
-  bool isFollowedBy(int userId) {
+  bool isFollowedBy(String userId) {
     if (!isAuthenticated) {
+      return false;
+    }
+    final currentUserId = _effectiveCurrentUserId;
+    if (currentUserId == null) {
       return false;
     }
     return follows.any(
       (follow) =>
           follow.followerId == userId &&
-          follow.followingId == _effectiveCurrentUserId,
+          follow.followingId == currentUserId,
     );
   }
 
-  bool isMutualFollow(int userId) {
+  bool isMutualFollow(String userId) {
     return getMutualFollowUserIds().contains(userId);
   }
 
-  void toggleFollow(int userId) {
+  Future<void> toggleFollow(String userId) async {
     if (!isAuthenticated) {
+      return;
+    }
+    final currentUserId = _effectiveCurrentUserId;
+    if (currentUserId == null) {
       return;
     }
 
     final index = follows.indexWhere(
       (follow) =>
-          follow.followerId == _effectiveCurrentUserId &&
+          follow.followerId == currentUserId &&
           follow.followingId == userId,
     );
 
     if (index != -1) {
+      await _client.from('user_follows').delete().match({
+        'follower_id': currentUserId,
+        'following_id': userId,
+      });
       follows.removeAt(index);
     } else {
+      await _client.from('user_follows').insert({
+        'follower_id': currentUserId,
+        'following_id': userId,
+      });
       follows.add(
-        FollowModel(followerId: _effectiveCurrentUserId, followingId: userId),
+        FollowModel(followerId: currentUserId, followingId: userId),
       );
     }
   }
@@ -442,61 +492,196 @@ class ChefzitoService {
   }
 
   // CREATE
-  void addPost(String description, int recipeId, {String? imageBase64}) {
+  Future<void> addPost(
+    String description,
+    String? recipeId, {
+    String? imageBase64,
+  }) async {
     final userId = _effectiveCurrentUserId;
-    posts.add(
-      PostModel(
-        id: posts.isEmpty ? 1 : posts.last.id + 1,
-        userId: userId,
-        recipeId: recipeId,
-        description: description,
-        imageBase64: imageBase64,
-        likesCount: 0,
-        likedByMe: false,
-        createdAt: DateTime.now(),
-      ),
-    );
+    if (userId == null) {
+      return;
+    }
+
+    String? mediaUrl;
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      try {
+        final bytes = base64Decode(imageBase64);
+        final filePath =
+            'user_$userId/post_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        mediaUrl = await _uploadImage(
+          bucket: 'posts',
+          filePath: filePath,
+          bytes: bytes,
+        );
+      } catch (_) {
+        mediaUrl = null;
+      }
+    }
+
+    final response = await _client
+        .from('posts')
+        .insert({
+          'user_id': userId,
+          'recipe_id': recipeId,
+          'caption': description,
+          'media_url': mediaUrl,
+        })
+        .select()
+        .single();
+
+    final newPost = PostModel.fromJson(response);
+    newPost.mediaUrl = mediaUrl;
+    posts.insert(0, newPost);
   }
 
-  void addComment(int postId, String content) {
+  Future<String?> addRecipe({
+    required String title,
+    required String description,
+    List<String> steps = const [],
+    int prepTimeMin = 20,
+    String difficulty = 'easy',
+    Uint8List? coverBytes,
+    bool generatedByAi = false,
+  }) async {
     final userId = _effectiveCurrentUserId;
-    comments.add(
-      CommentModel(
-        id: comments.isEmpty ? 1 : comments.last.id + 1,
-        postId: postId,
-        userId: userId,
-        content: content,
-        createdAt: DateTime.now(),
-      ),
-    );
+    if (userId == null) {
+      return null;
+    }
+
+    try {
+      String? coverUrl;
+      if (coverBytes != null && coverBytes.isNotEmpty) {
+        final filePath =
+            'user_$userId/recipe_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        coverUrl = await _uploadImage(
+          bucket: 'recipes',
+          filePath: filePath,
+          bytes: coverBytes,
+        );
+      }
+
+      final response = await _client
+          .from('recipes')
+          .insert({
+            'author_id': userId,
+            'title': title,
+            'description': description,
+            'cover_image_url': coverUrl ?? '',
+            'prep_time_min': prepTimeMin,
+            'difficulty': difficulty,
+            'ai_generated': generatedByAi,
+          })
+          .select()
+          .single();
+
+      final newRecipe = RecipeModel.fromJson(response, steps: steps);
+      recipes.insert(0, newRecipe);
+
+      if (steps.isNotEmpty) {
+        final stepPayload = List.generate(
+          steps.length,
+          (index) => {
+            'recipe_id': newRecipe.id,
+            'step_number': index + 1,
+            'instruction': steps[index],
+          },
+        );
+        await _client.from('recipe_steps').insert(stepPayload);
+      }
+
+      return newRecipe.id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _uploadImage({
+    required String bucket,
+    required String filePath,
+    required Uint8List bytes,
+  }) async {
+    try {
+      await _client.storage.from(bucket).uploadBinary(
+            filePath,
+            bytes,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'image/jpeg',
+            ),
+          );
+
+      return _client.storage.from(bucket).getPublicUrl(filePath);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> addComment(String postId, String content) async {
+    final userId = _effectiveCurrentUserId;
+    if (userId == null) {
+      return;
+    }
+
+    final response = await _client
+        .from('post_comments')
+        .insert({
+          'post_id': postId,
+          'user_id': userId,
+          'comment': content,
+        })
+        .select()
+        .single();
+
+    comments.add(CommentModel.fromJson(response));
   }
 
   // UPDATE
-  void updatePost(int postId, String newDescription) {
+  Future<void> updatePost(String postId, String newDescription) async {
     final index = posts.indexWhere((p) => p.id == postId);
     if (index != -1) {
       posts[index].description = newDescription;
+      await _client.from('posts').update({
+        'caption': newDescription,
+      }).eq('id', postId);
     }
   }
 
   // DELETE
-  void deletePost(int postId) {
+  Future<void> deletePost(String postId) async {
+    await _client.from('posts').delete().eq('id', postId);
+    await _client.from('post_comments').delete().eq('post_id', postId);
     posts.removeWhere((p) => p.id == postId);
     comments.removeWhere((c) => c.postId == postId);
   }
 
   // LIKE
-  void toggleLike(int postId) {
+  Future<void> toggleLike(String postId) async {
     final post = posts.firstWhere((p) => p.id == postId);
+    final userId = _effectiveCurrentUserId;
+    if (userId == null) {
+      return;
+    }
     if (post.likedByMe) {
       if (post.likesCount > 0) {
         post.likesCount -= 1;
       }
       post.likedByMe = false;
+      await _client.from('post_likes').delete().match({
+        'user_id': userId,
+        'post_id': postId,
+      });
     } else {
       post.likesCount += 1;
       post.likedByMe = true;
+      await _client.from('post_likes').insert({
+        'user_id': userId,
+        'post_id': postId,
+      });
     }
+
+    await _client.from('posts').update({
+      'likes_count': post.likesCount,
+    }).eq('id', postId);
   }
 
   Set<String> _extractIngredientsFromRecipe(RecipeModel recipe) {

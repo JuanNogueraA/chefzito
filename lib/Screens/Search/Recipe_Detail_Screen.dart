@@ -19,6 +19,17 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   bool _pulseUp = true;
 
+  ImageProvider? _coverProvider() {
+    final cover = widget.recipe.coverImageUrl.trim();
+    if (cover.isEmpty) {
+      return null;
+    }
+    if (cover.startsWith('http')) {
+      return NetworkImage(cover);
+    }
+    return AssetImage(cover);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -262,16 +273,24 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   fit: StackFit.expand,
                   children: [
                     Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
                           colors: [Color(0xFFFFE8CC), Color(0xFFFFF4E6)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
+                        image: _coverProvider() == null
+                            ? null
+                            : DecorationImage(
+                                image: _coverProvider()!,
+                                fit: BoxFit.cover,
+                              ),
                       ),
-                      child: const Center(
-                        child: Text('🍝', style: TextStyle(fontSize: 120)),
-                      ),
+                      child: _coverProvider() == null
+                          ? const Center(
+                              child: Text('🍝', style: TextStyle(fontSize: 120)),
+                            )
+                          : null,
                     ),
                     Positioned(
                       right: 14,

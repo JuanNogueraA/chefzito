@@ -14,6 +14,16 @@ class ChefCard extends StatelessWidget {
     required this.subtitle, required this.score, required this.imgUrl
   }) : super(key: key);
 
+  ImageProvider _avatarProvider() {
+    if (imgUrl.isEmpty) {
+      return const AssetImage('assets/img/avatar1.png');
+    }
+    if (imgUrl.startsWith('http')) {
+      return NetworkImage(imgUrl);
+    }
+    return AssetImage(imgUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -24,7 +34,7 @@ class ChefCard extends StatelessWidget {
         children: [
           RankBadge(rank: rank),
           const SizedBox(height: 10),
-          CircleAvatar(radius: 40, backgroundImage: NetworkImage(imgUrl)),
+          CircleAvatar(radius: 40, backgroundImage: _avatarProvider()),
           const SizedBox(height: 10),
           Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text(handle, style: const TextStyle(color: Colors.grey, fontSize: 13)),

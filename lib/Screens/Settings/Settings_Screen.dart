@@ -219,8 +219,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       height: 55,
                       child: OutlinedButton(
-                        onPressed: () {
-                          _service.logout();
+                        onPressed: () async {
+                          await _service.logout();
+                          if (!mounted) return;
                           Navigator.pushNamedAndRemoveUntil(
                             context,
                             '/login',

@@ -4,13 +4,25 @@ class ProfileCard extends StatelessWidget {
   final VoidCallback onEditProfile; // Función para abrir el modal
   final String userName;
   final String userHandle;
+  final String avatarUrl;
 
   const ProfileCard({
     Key? key,
     required this.onEditProfile,
     required this.userName,
     required this.userHandle,
+    required this.avatarUrl,
   }) : super(key: key);
+
+  ImageProvider _avatarProvider() {
+    if (avatarUrl.isEmpty) {
+      return const AssetImage('assets/img/avatar1.png');
+    }
+    if (avatarUrl.startsWith('http')) {
+      return NetworkImage(avatarUrl);
+    }
+    return AssetImage(avatarUrl);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +40,9 @@ class ProfileCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 35,
-                backgroundImage: NetworkImage('https://images.unsplash.com/photo-1577219491135-ce391730fb2c?q=80&w=200&auto=format&fit=crop'),
+                backgroundImage: _avatarProvider(),
               ),
               const SizedBox(width: 15),
               Expanded(

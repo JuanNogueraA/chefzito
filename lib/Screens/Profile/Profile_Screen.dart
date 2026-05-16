@@ -8,7 +8,8 @@ import 'package:chefzito/Widgets/Profile_Screen_Widgets/Profile_Card.dart';
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Profile_Tab_Button.dart';
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Photo_Grid.dart';
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Achievements_Card.dart';
-import 'package:chefzito/Widgets/Profile_Screen_Widgets/Edit_Profile_Modal.dart';
+import 'package:chefzito/Widgets/Profile_Screen_Widgets/Edit_Profile_Modal.dart'
+    show showEditProfileModal;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -40,6 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final displayName = _displayChefName();
     final handle = '@${displayName.toLowerCase().replaceAll(' ', '')}';
+    final currentUser = _service.currentUser;
+    final avatarUrl = currentUser?.avatarUrl ?? '';
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -86,9 +89,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Positioned(
                         top: 130, left: 20, right: 20,
                         child: ProfileCard(
-                          onEditProfile: () => showEditProfileModal(context),
+                          onEditProfile: () => showEditProfileModal(
+                            context,
+                            service: _service,
+                            user: currentUser,
+                            onUpdated: () {
+                              if (mounted) {
+                                setState(() {});
+                              }
+                            },
+                          ),
                           userName: displayName,
                           userHandle: handle,
+                          avatarUrl: avatarUrl,
                         ),
                       ),
                     ],

@@ -59,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  int _likesForRecipe(int recipeId) {
+  int _likesForRecipe(String recipeId) {
     final relatedPosts = _service
         .getPosts()
         .where((post) => post.recipeId == recipeId)
@@ -304,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Tienes ${_service.getRecipes().length} recetas cargadas desde JSON. Usa Buscar para encontrar la ideal según tus ingredientes.',
+                                'Tienes ${_service.getRecipes().length} recetas cargadas desde Supabase. Usa Buscar para encontrar la ideal según tus ingredientes.',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -342,6 +342,17 @@ class _RecipeCard extends StatelessWidget {
     required this.tint,
     required this.accent,
   });
+
+  ImageProvider _coverProvider() {
+    final cover = recipe.coverImageUrl;
+    if (cover.isEmpty) {
+      return const AssetImage('assets/img/Chefcito_corona.png');
+    }
+    if (cover.startsWith('http')) {
+      return NetworkImage(cover);
+    }
+    return AssetImage(cover);
+  }
 
   String _emojiForTitle() {
     final title = recipe.title.toLowerCase();
@@ -392,9 +403,18 @@ class _RecipeCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: accent.withValues(alpha: 0.14),
+                    image: DecorationImage(
+                      image: _coverProvider(),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                   alignment: Alignment.center,
-                  child: Text(_emojiForTitle(), style: const TextStyle(fontSize: 32)),
+                  child: recipe.coverImageUrl.isEmpty
+                      ? Text(
+                          _emojiForTitle(),
+                          style: const TextStyle(fontSize: 32),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 Text(

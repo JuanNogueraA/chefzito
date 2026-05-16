@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:chefzito/services/chefzito_service.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
@@ -46,32 +49,67 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return 'ahora';
   }
 
-  void _createPost(CreatePostData data) {
-    final recipeId = _service.findRecipeIdByTitle(data.recipeName) ?? 1;
+  Future<void> _createPost(CreatePostData data) async {
+    final fallbackRecipeId =
+        _service.getRecipes().isNotEmpty ? _service.getRecipes().first.id : null;
+    final normalizedName = data.recipeName.trim();
+    String? recipeId = _service.findRecipeIdByTitle(normalizedName);
 
-    setState(() {
-      _service.addPost(
-        data.description.isEmpty ? 'Nueva publicación' : data.description,
-        recipeId,
-        imageBase64: data.imageBase64,
+    if (recipeId == null && normalizedName.isNotEmpty) {
+      Uint8List? coverBytes;
+      if (data.imageBase64 != null && data.imageBase64!.isNotEmpty) {
+        try {
+          coverBytes = base64Decode(data.imageBase64!);
+        } catch (_) {
+          coverBytes = null;
+        }
+      }
+
+      final recipeSteps = data.steps.isNotEmpty
+          ? data.steps
+          : const [
+              'Agrega los ingredientes principales y cocina con cuidado.',
+              'Ajusta sal y condimentos al gusto antes de servir.',
+            ];
+
+      recipeId = await _service.addRecipe(
+        title: normalizedName,
+        description: data.description.isEmpty
+            ? 'Receta creada en Chefzito'
+            : data.description,
+        steps: recipeSteps,
+        prepTimeMin: data.prepTimeMin,
+        difficulty: data.difficulty,
+        coverBytes: coverBytes,
       );
+    }
+
+    recipeId ??= fallbackRecipeId;
+
+    await _service.addPost(
+      data.description.isEmpty ? 'Nueva publicación' : data.description,
+      recipeId,
+      imageBase64: data.imageBase64,
+    );
+    if (!mounted) return;
+    setState(() {
       isPublicTab = data.isPublic;
     });
   }
 
-  void _deletePost(int postId) {
-    setState(() {
-      _service.deletePost(postId);
-    });
+  Future<void> _deletePost(String postId) async {
+    await _service.deletePost(postId);
+    if (!mounted) return;
+    setState(() {});
   }
 
-  void _toggleFollow(int userId) {
-    setState(() {
-      _service.toggleFollow(userId);
-    });
+  Future<void> _toggleFollow(String userId) async {
+    await _service.toggleFollow(userId);
+    if (!mounted) return;
+    setState(() {});
   }
 
-  Future<void> _openComments(int postId) async {
+  Future<void> _openComments(String postId) async {
     await showCommentsBottomSheet(
       context: context,
       service: _service,
@@ -132,28 +170,35 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     ...visiblePosts.map((post) {
                       final user = _service.getUser(post.userId);
-                      final recipe = _service.getRecipe(post.recipeId);
+                      final recipe = post.recipeId != null
+                          ? _service.getRecipe(post.recipeId!)
+                          : null;
                       final isFollowing = followingIds.contains(post.userId);
                       final isMutual = mutualFollowIds.contains(post.userId);
 
+                      final postImage = post.mediaUrl?.isNotEmpty == true
+                          ? post.mediaUrl!
+                          : (recipe?.coverImageUrl ??
+                              'assets/img/Chefcito_corona.png');
                       return PostCard(
                         postId: post.id,
                         authorId: post.userId,
                         userName: user.username,
                         userHandle: '@${user.username}',
                         time: _timeAgo(post.createdAt),
-                        recipeName: recipe.title,
+                        recipeName: recipe?.title ?? 'Receta Chefzito',
                         likes: post.likesCount.toString(),
                         caption: post.description,
-                        imageUrl: recipe.coverImageUrl,
+                        imageUrl: postImage,
                         imageBase64: post.imageBase64,
+                        avatarUrl: user.avatarUrl,
                         isFollowing: isFollowing,
                         isMutualFollow: isMutual,
                         isLiked: post.likedByMe,
-                        onLikePressed: () {
-                          setState(() {
-                            _service.toggleLike(post.id);
-                          });
+                        onLikePressed: () async {
+                          await _service.toggleLike(post.id);
+                          if (!mounted) return;
+                          setState(() {});
                         },
                         onDeletePressed: () => _deletePost(post.id),
                         onCommentsPressed: () => _openComments(post.id),
