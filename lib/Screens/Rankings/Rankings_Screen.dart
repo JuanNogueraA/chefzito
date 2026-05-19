@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/rankings_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 import 'package:chefzito/models/post_model.dart';
 import 'package:chefzito/models/recipe_model.dart';
 import 'package:chefzito/models/user_model.dart';
@@ -19,17 +20,19 @@ class RankingsScreen extends StatefulWidget {
 
 class _RankingsScreenState extends State<RankingsScreen> {
   int selectedTab = 0;
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final RankingsUseCases _useCases;
   late final Future<void> _loadFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = RankingsUseCases(_adapter);
+    _loadFuture = _useCases.init();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -108,12 +111,12 @@ class _RankingsScreenState extends State<RankingsScreen> {
           }
 
           final chefName = _displayChefName();
-          final recipes = _service.getRecipes();
-          final posts = _service.getPosts();
-          final users = _service.getUsers();
+          final recipes = _useCases.getRecipes();
+          final posts = _useCases.getPosts();
+          final users = _useCases.getUsers();
           final recipeRankings = _buildRecipeRankings(recipes, posts);
           final chefRankings = _buildChefRankings(users, recipes, posts);
-          final ingredientRankings = _service.getIngredientRanking(limit: 6);
+          final ingredientRankings = _useCases.getIngredientRanking(limit: 6);
 
           return Column(
             children: [

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
 import 'package:chefzito/Screens/Settings/Settings_Screen.dart'; // Importamos la pantalla de ajustes
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/profile_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 // ¡Nuestros componentes importados!
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Profile_Card.dart';
@@ -20,17 +21,19 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool isMyRecipesTab = true;
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final ProfileUseCases _useCases;
   late final Future<void> _loadFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = ProfileUseCases(_adapter);
+    _loadFuture = _useCases.init();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -41,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final displayName = _displayChefName();
     final handle = '@${displayName.toLowerCase().replaceAll(' ', '')}';
-    final currentUser = _service.currentUser;
+    final currentUser = _useCases.currentUser;
     final avatarUrl = currentUser?.avatarUrl ?? '';
 
     return Scaffold(
@@ -91,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: ProfileCard(
                           onEditProfile: () => showEditProfileModal(
                             context,
-                            service: _service,
+                            useCases: _useCases,
                             user: currentUser,
                             onUpdated: () {
                               if (mounted) {

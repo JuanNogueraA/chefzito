@@ -6,7 +6,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:chefzito/Screens/Search/Recipe_Detail_Screen.dart';
 import 'package:chefzito/Screens/Search/Search_Results_Screen.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/add_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/detect_ingredients_use_case.dart';
+import 'package:chefzito/core/application/use_cases/generate_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_chef_name_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_common_ingredients_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/init_app_use_case.dart';
+import 'package:chefzito/core/application/use_cases/search_recipes_use_case.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -16,7 +24,15 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final InitAppUseCase _initAppUseCase;
+  late final GetChefNameUseCase _getChefNameUseCase;
+  late final GetCommonIngredientsUseCase _getCommonIngredientsUseCase;
+  late final DetectIngredientsUseCase _detectIngredientsUseCase;
+  late final GenerateRecipeUseCase _generateRecipeUseCase;
+  late final SearchRecipesUseCase _searchRecipesUseCase;
+  late final AddRecipeUseCase _addRecipeUseCase;
+  late final GetRecipeUseCase _getRecipeUseCase;
   final TextEditingController _ingredientController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   late final Future<void> _loadFuture;
@@ -26,11 +42,19 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _initAppUseCase = InitAppUseCase(_adapter);
+    _getChefNameUseCase = GetChefNameUseCase(_adapter);
+    _getCommonIngredientsUseCase = GetCommonIngredientsUseCase(_adapter);
+    _detectIngredientsUseCase = DetectIngredientsUseCase(_adapter);
+    _generateRecipeUseCase = GenerateRecipeUseCase(_adapter);
+    _searchRecipesUseCase = SearchRecipesUseCase(_adapter);
+    _addRecipeUseCase = AddRecipeUseCase(_adapter);
+    _getRecipeUseCase = GetRecipeUseCase(_adapter);
+    _loadFuture = _initAppUseCase();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _getChefNameUseCase().trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -124,7 +148,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     List<String> detected = [];
     try {
-      detected = await _service.detectIngredientsFromImage(
+      detected = await _detectIngredientsUseCase(
         imageBytes,
         maxIngredients: 8,
       );
@@ -146,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (detected.isEmpty) {
-      detected = _service.getCommonIngredients(limit: 7);
+      detected = _getCommonIngredientsUseCase(limit: 7);
     }
 
     final selectedLower = _selectedIngredients.map((i) => i.toLowerCase()).toSet();
@@ -181,7 +205,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     Map<String, dynamic>? recipe;
     try {
-      recipe = await _service.generateRecipeFromIngredients(
+      recipe = await _generateRecipeUseCase(
         _selectedIngredients,
         maxSteps: 6,
       );
@@ -267,7 +291,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             Future<void> handleSave() async {
               setModalState(() => isSaving = true);
-              final recipeId = await _service.addRecipe(
+              final recipeId = await _addRecipeUseCase(
                 title: title,
                 description: description.isEmpty ? 'Receta creada con IA en Chefzito.' : description,
                 steps: steps,
@@ -289,7 +313,7 @@ class _SearchScreenState extends State<SearchScreen> {
               }
 
               Navigator.of(context).pop();
-              final savedRecipe = _service.getRecipe(recipeId);
+              final savedRecipe = _getRecipeUseCase(recipeId);
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) => RecipeDetailScreen(
@@ -528,7 +552,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     final selected = List<String>.from(_selectedIngredients);
-    final recipes = _service.searchRecipesByIngredients(selected);
+    final recipes = _searchRecipesUseCase(selected);
 
     Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -565,7 +589,7 @@ class _SearchScreenState extends State<SearchScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final commonIngredients = _service.getCommonIngredients();
+          final commonIngredients = _getCommonIngredientsUseCase();
           final chefName = _displayChefName();
 
           return Stack(

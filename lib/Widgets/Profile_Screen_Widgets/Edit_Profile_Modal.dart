@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:chefzito/core/application/use_cases/profile_use_cases.dart';
 import 'package:chefzito/models/user_model.dart';
-import 'package:chefzito/services/chefzito_service.dart';
 
 void showEditProfileModal(
   BuildContext context, {
-  required ChefzitoService service,
+  required ProfileUseCases useCases,
   required UserModel? user,
   required VoidCallback onUpdated,
 }) {
@@ -220,7 +220,7 @@ void showEditProfileModal(
                           child: ElevatedButton(
                             onPressed: () async {
                               if (selectedAvatarBytes != null) {
-                                await service
+                                await useCases
                                     .uploadAvatar(selectedAvatarBytes!);
                               }
                               onUpdated();

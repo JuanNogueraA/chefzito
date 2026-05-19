@@ -4,7 +4,8 @@ import 'package:chefzito/Screens/Community/Community_Screen.dart';
 import 'package:chefzito/Screens/Rankings/Rankings_Screen.dart';
 import 'package:chefzito/Screens/Search/Search_Screen.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/home_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,12 +15,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final HomeUseCases _useCases;
   late final Future<void> _loadFuture;
   bool _showContent = false;
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -29,7 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = HomeUseCases(_adapter);
+    _loadFuture = _useCases.init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -60,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int _likesForRecipe(String recipeId) {
-    final relatedPosts = _service
+    final relatedPosts = _useCases
         .getPosts()
         .where((post) => post.recipeId == recipeId)
         .toList();
@@ -73,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<RecipeModel> _topRecipes() {
-    final recipes = List<RecipeModel>.from(_service.getRecipes());
+    final recipes = List<RecipeModel>.from(_useCases.getRecipes());
     recipes.sort((a, b) => _likesForRecipe(b.id).compareTo(_likesForRecipe(a.id)));
     return recipes.take(3).toList();
   }
@@ -108,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final topRecipes = _topRecipes();
-          final trends = _service.getTrends();
+          final trends = _useCases.getTrends();
           final chefName = _displayChefName();
 
           return Column(
@@ -304,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Tienes ${_service.getRecipes().length} recetas cargadas desde Supabase. Usa Buscar para encontrar la ideal según tus ingredientes.',
+                                'Tienes ${_useCases.getRecipes().length} recetas cargadas desde Supabase. Usa Buscar para encontrar la ideal según tus ingredientes.',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,

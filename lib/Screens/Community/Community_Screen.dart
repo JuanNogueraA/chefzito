@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/community_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
 import 'package:chefzito/Widgets/Community_Screen_Widgets/Community_Header.dart';
 import 'package:chefzito/Widgets/Community_Screen_Widgets/Comments_Bottom_Sheet.dart';
@@ -19,11 +20,12 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> {
   bool isPublicTab = true;
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final CommunityUseCases _useCases;
   late final Future<void> _loadFuture;
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -33,7 +35,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = CommunityUseCases(_adapter);
+    _loadFuture = _useCases.init();
   }
 
   Color get primaryColor =>
@@ -50,10 +53,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> _createPost(CreatePostData data) async {
-    final fallbackRecipeId =
-        _service.getRecipes().isNotEmpty ? _service.getRecipes().first.id : null;
+    final fallbackRecipeId = _useCases.getRecipes().isNotEmpty
+        ? _useCases.getRecipes().first.id
+        : null;
     final normalizedName = data.recipeName.trim();
-    String? recipeId = _service.findRecipeIdByTitle(normalizedName);
+    String? recipeId = _useCases.findRecipeIdByTitle(normalizedName);
 
     if (recipeId == null && normalizedName.isNotEmpty) {
       Uint8List? coverBytes;
@@ -72,7 +76,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               'Ajusta sal y condimentos al gusto antes de servir.',
             ];
 
-      recipeId = await _service.addRecipe(
+      recipeId = await _useCases.addRecipe(
         title: normalizedName,
         description: data.description.isEmpty
             ? 'Receta creada en Chefzito'
@@ -86,7 +90,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     recipeId ??= fallbackRecipeId;
 
-    await _service.addPost(
+    await _useCases.addPost(
       data.description.isEmpty ? 'Nueva publicación' : data.description,
       recipeId,
       imageBase64: data.imageBase64,
@@ -98,13 +102,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> _deletePost(String postId) async {
-    await _service.deletePost(postId);
+    await _useCases.deletePost(postId);
     if (!mounted) return;
     setState(() {});
   }
 
   Future<void> _toggleFollow(String userId) async {
-    await _service.toggleFollow(userId);
+    await _useCases.toggleFollow(userId);
     if (!mounted) return;
     setState(() {});
   }
@@ -112,7 +116,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<void> _openComments(String postId) async {
     await showCommentsBottomSheet(
       context: context,
-      service: _service,
+      useCases: _useCases,
       postId: postId,
       onCommentsChanged: () {
         setState(() {});
@@ -148,10 +152,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 }
 
                 final visiblePosts = isPublicTab
-                    ? _service.getPublicPosts()
-                    : _service.getFriendsPosts();
-                final followingIds = _service.getFollowingUserIds();
-                final mutualFollowIds = _service.getMutualFollowUserIds();
+                    ? _useCases.getPublicPosts()
+                    : _useCases.getFriendsPosts();
+                final followingIds = _useCases.getFollowingUserIds();
+                final mutualFollowIds = _useCases.getMutualFollowUserIds();
 
                 return ListView(
                   padding: const EdgeInsets.all(0),
@@ -169,9 +173,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         ),
                       ),
                     ...visiblePosts.map((post) {
-                      final user = _service.getUser(post.userId);
+                      final user = _useCases.getUser(post.userId);
                       final recipe = post.recipeId != null
-                          ? _service.getRecipe(post.recipeId!)
+                          ? _useCases.getRecipe(post.recipeId!)
                           : null;
                       final isFollowing = followingIds.contains(post.userId);
                       final isMutual = mutualFollowIds.contains(post.userId);
@@ -196,7 +200,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         isMutualFollow: isMutual,
                         isLiked: post.likedByMe,
                         onLikePressed: () async {
-                          await _service.toggleLike(post.id);
+                          await _useCases.toggleLike(post.id);
                           if (!mounted) return;
                           setState(() {});
                         },

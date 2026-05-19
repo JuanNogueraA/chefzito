@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:chefzito/core/application/use_cases/community_use_cases.dart';
+
 import '../../models/comment_model.dart';
-import '../../services/chefzito_service.dart';
 
 String _timeAgo(DateTime dateTime) {
   final diff = DateTime.now().difference(dateTime);
@@ -13,7 +14,7 @@ String _timeAgo(DateTime dateTime) {
 
 Future<void> showCommentsBottomSheet({
   required BuildContext context,
-  required ChefzitoService service,
+  required CommunityUseCases useCases,
   required String postId,
   required VoidCallback onCommentsChanged,
 }) async {
@@ -26,18 +27,18 @@ Future<void> showCommentsBottomSheet({
     builder: (sheetContext) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
-          List<CommentModel> comments = service.getCommentsByPost(postId);
+          List<CommentModel> comments = useCases.getCommentsByPost(postId);
 
           Future<void> addComment() async {
             final text = commentController.text.trim();
             if (text.isEmpty) return;
 
-            await service.addComment(postId, text);
+            await useCases.addComment(postId, text);
             commentController.clear();
             onCommentsChanged();
 
             setSheetState(() {
-              comments = service.getCommentsByPost(postId);
+              comments = useCases.getCommentsByPost(postId);
             });
           }
 
@@ -101,7 +102,7 @@ Future<void> showCommentsBottomSheet({
                                 const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final comment = comments[index];
-                              final user = service.getUser(comment.userId);
+                              final user = useCases.getUser(comment.userId);
                               final avatar = user.avatarUrl;
                               final avatarProvider = avatar.startsWith('http')
                                   ? NetworkImage(avatar)
