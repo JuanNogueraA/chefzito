@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chefzito/Screens/Auth/Splash_Screen.dart';
 import 'package:chefzito/Screens/Auth/Welcome_Screen.dart';
 import 'package:chefzito/Screens/Auth/Login_Screen.dart';
 import 'package:chefzito/Screens/Home/Home_Screen.dart';
@@ -18,14 +19,15 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Chefzito',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const WelcomeScreen(),
+        '/': (context) => const SplashScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => HomeScreen(),
         '/buscar': (context) => SearchScreen(),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/login_use_case.dart';
+import 'package:chefzito/core/application/use_cases/register_use_case.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,7 +14,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final LoginUseCase _loginUseCase;
+  late final RegisterUseCase _registerUseCase;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -32,6 +36,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+
+    _loginUseCase = LoginUseCase(_adapter);
+    _registerUseCase = RegisterUseCase(_adapter);
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1000),
@@ -96,12 +103,12 @@ class _LoginScreenState extends State<LoginScreen>
     String? error;
 
     if (_isLogin) {
-      error = await _service.login(
+      error = await _loginUseCase(
         email: _emailController.text,
         password: _passwordController.text,
       );
     } else {
-      error = await _service.register(
+      error = await _registerUseCase(
         username: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,

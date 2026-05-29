@@ -38,6 +38,17 @@ class SearchResultsScreen extends StatelessWidget {
     return '🍽️';
   }
 
+  ImageProvider? _coverProvider(RecipeModel recipe) {
+    final cover = recipe.coverImageUrl.trim();
+    if (cover.isEmpty) {
+      return null;
+    }
+    if (cover.startsWith('http')) {
+      return NetworkImage(cover);
+    }
+    return AssetImage(cover);
+  }
+
   void _openDetail(BuildContext context, RecipeModel recipe) {
     Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -178,12 +189,20 @@ class SearchResultsScreen extends StatelessWidget {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
+                                        image: _coverProvider(recipe) == null
+                                            ? null
+                                            : DecorationImage(
+                                                image: _coverProvider(recipe)!,
+                                                fit: BoxFit.cover,
+                                              ),
                                       ),
                                       alignment: Alignment.center,
-                                      child: Text(
-                                        _emojiForRecipe(recipe),
-                                        style: const TextStyle(fontSize: 62),
-                                      ),
+                                      child: _coverProvider(recipe) == null
+                                          ? Text(
+                                              _emojiForRecipe(recipe),
+                                              style: const TextStyle(fontSize: 62),
+                                            )
+                                          : null,
                                     ),
                                     Positioned(
                                       right: 10,

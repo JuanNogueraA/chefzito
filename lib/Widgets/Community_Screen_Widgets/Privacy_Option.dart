@@ -20,24 +20,22 @@ class PrivacyOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          decoration: BoxDecoration(
-            border: Border.all(color: isActive ? color : Colors.grey[300]!, width: 1.5),
-            borderRadius: BorderRadius.circular(15),
-            color: Colors.white,
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: isActive ? color : Colors.grey[400], size: 30),
-              const SizedBox(height: 8),
-              Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? color : Colors.grey[800])),
-              Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          border: Border.all(color: isActive ? color : Colors.grey[300]!, width: 1.5),
+          borderRadius: BorderRadius.circular(15),
+          color: Colors.white,
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: isActive ? color : Colors.grey[400], size: 30),
+            const SizedBox(height: 8),
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? color : Colors.grey[800])),
+            Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          ],
         ),
       ),
     );

@@ -11,12 +11,18 @@ class CreatePostData {
   final String recipeName;
   final String description;
   final String? imageBase64;
+  final List<String> steps;
+  final int prepTimeMin;
+  final String difficulty;
 
   const CreatePostData({
     required this.isPublic,
     required this.recipeName,
     required this.description,
     this.imageBase64,
+    this.steps = const [],
+    this.prepTimeMin = 20,
+    this.difficulty = 'easy',
   });
 }
 
@@ -31,9 +37,30 @@ Future<void> showCreatePostModal({
   final imagePicker = ImagePicker();
   final recipeController = TextEditingController();
   final descriptionController = TextEditingController();
+  final prepTimeController = TextEditingController(text: '20');
+  final stepController = TextEditingController();
   Uint8List? selectedImageBytes;
   String? selectedImageBase64;
   String? selectedImageName;
+  String selectedDifficulty = 'easy';
+  final List<String> steps = [];
+
+  void addStep(StateSetter setModalState) {
+    final step = stepController.text.trim();
+    if (step.isEmpty) {
+      return;
+    }
+    setModalState(() {
+      steps.add(step);
+      stepController.clear();
+    });
+  }
+
+  void removeStep(StateSetter setModalState, int index) {
+    setModalState(() {
+      steps.removeAt(index);
+    });
+  }
 
   Future<void> pickImage(StateSetter setModalState) async {
     final image = await imagePicker.pickImage(
@@ -64,21 +91,28 @@ Future<void> showCreatePostModal({
 
   final postData = await showModalBottomSheet<CreatePostData>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (modalContext) {
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setModalState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+          final mediaQuery = MediaQuery.of(context);
+          final size = mediaQuery.size;
+          final isWide = size.width >= 520;
+          final imageHeight = isWide ? 220.0 : 180.0;
+          return SafeArea(
+            child: Container(
+              height: size.height * 0.9,
+              margin: const EdgeInsets.only(top: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
               ),
-            ),
-            child: Column(
+              child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -125,33 +159,67 @@ Future<void> showCreatePostModal({
                           ),
                         ),
                         const SizedBox(height: 15),
-                        Row(
-                          children: [
-                            PrivacyOption(
-                              icon: Icons.public,
-                              title: 'Público',
-                              subtitle: 'Todos pueden ver',
-                              isActive: isPublicTab,
-                              color: const Color(0xFFFF5E00),
-                              onTap: () {
-                                setModalState(() => isPublicTab = true);
-                                onTabChanged(true);
-                              },
-                            ),
-                            const SizedBox(width: 15),
-                            PrivacyOption(
-                              icon: Icons.people_alt_outlined,
-                              title: 'Solo Amigos',
-                              subtitle: 'Solo tus amigos',
-                              isActive: !isPublicTab,
-                              color: const Color(0xFF8A2BE2),
-                              onTap: () {
-                                setModalState(() => isPublicTab = false);
-                                onTabChanged(false);
-                              },
-                            ),
-                          ],
-                        ),
+                        if (isWide)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PrivacyOption(
+                                  icon: Icons.public,
+                                  title: 'Público',
+                                  subtitle: 'Todos pueden ver',
+                                  isActive: isPublicTab,
+                                  color: const Color(0xFFFF5E00),
+                                  onTap: () {
+                                    setModalState(() => isPublicTab = true);
+                                    onTabChanged(true);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: PrivacyOption(
+                                  icon: Icons.people_alt_outlined,
+                                  title: 'Solo Amigos',
+                                  subtitle: 'Solo tus amigos',
+                                  isActive: !isPublicTab,
+                                  color: const Color(0xFF8A2BE2),
+                                  onTap: () {
+                                    setModalState(() => isPublicTab = false);
+                                    onTabChanged(false);
+                                  },
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              PrivacyOption(
+                                icon: Icons.public,
+                                title: 'Público',
+                                subtitle: 'Todos pueden ver',
+                                isActive: isPublicTab,
+                                color: const Color(0xFFFF5E00),
+                                onTap: () {
+                                  setModalState(() => isPublicTab = true);
+                                  onTabChanged(true);
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              PrivacyOption(
+                                icon: Icons.people_alt_outlined,
+                                title: 'Solo Amigos',
+                                subtitle: 'Solo tus amigos',
+                                isActive: !isPublicTab,
+                                color: const Color(0xFF8A2BE2),
+                                onTap: () {
+                                  setModalState(() => isPublicTab = false);
+                                  onTabChanged(false);
+                                },
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 25),
                         const Text(
                           'Foto de tu platillo',
@@ -164,7 +232,7 @@ Future<void> showCreatePostModal({
                         GestureDetector(
                           onTap: () => pickImage(setModalState),
                           child: Container(
-                            height: 180,
+                            height: imageHeight,
                             width: double.infinity,
                             decoration: BoxDecoration(
                               border: Border.all(
@@ -297,6 +365,245 @@ Future<void> showCreatePostModal({
                         ),
                         const SizedBox(height: 25),
                         const Text(
+                          'Detalles de la receta',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (isWide)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: prepTimeController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: 'Tiempo (min)'
+                                        .trim(),
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon: const Icon(Icons.schedule),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: selectedDifficulty,
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon: const Icon(Icons.star_outline),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'easy',
+                                      child: Text('Fácil'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'medium',
+                                      child: Text('Media'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'hard',
+                                      child: Text('Difícil'),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedDifficulty = value;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              TextField(
+                                controller: prepTimeController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  hintText: 'Tiempo (min)',
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  prefixIcon: const Icon(Icons.schedule),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                value: selectedDifficulty,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  prefixIcon: const Icon(Icons.star_outline),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'easy',
+                                    child: Text('Fácil'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'medium',
+                                    child: Text('Media'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'hard',
+                                    child: Text('Difícil'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setModalState(() {
+                                    selectedDifficulty = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 25),
+                        const Text(
+                          'Pasos de preparación',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: stepController,
+                                decoration: InputDecoration(
+                                  hintText: 'Ej: Cocinar la pasta al dente',
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                onSubmitted: (_) => addStep(setModalState),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOut,
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                onPressed: () => addStep(setModalState),
+                                icon: const Icon(Icons.add, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 260),
+                          curve: Curves.easeOut,
+                          child: steps.isEmpty
+                              ? AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 240),
+                                  opacity: 0.6,
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey[200]!)),
+                                    child: const Text(
+                                      'Agrega al menos 2 pasos para que la receta quede completa.',
+                                      style: TextStyle(color: Colors.black54),
+                                    ),
+                                  ),
+                                )
+                              : Column(
+                                  children: steps.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final step = entry.value;
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey[200]!,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 26,
+                                            height: 26,
+                                            decoration: BoxDecoration(
+                                              color: primaryColor.withValues(
+                                                alpha: 0.12,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              '${index + 1}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              step,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () =>
+                                                removeStep(setModalState, index),
+                                            icon: const Icon(
+                                              Icons.close,
+                                              size: 18,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                        ),
+                        const SizedBox(height: 25),
+                        const Text(
                           'Descripción',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -320,11 +627,18 @@ Future<void> showCreatePostModal({
                         const SizedBox(height: 30),
                         GestureDetector(
                           onTap: () {
+                            final parsedPrep = int.tryParse(
+                                  prepTimeController.text.trim(),
+                                ) ??
+                                20;
                             final data = CreatePostData(
                               isPublic: isPublicTab,
                               recipeName: recipeController.text.trim(),
                               description: descriptionController.text.trim(),
                               imageBase64: selectedImageBase64,
+                              steps: List<String>.from(steps),
+                              prepTimeMin: parsedPrep,
+                              difficulty: selectedDifficulty,
                             );
                             Navigator.pop(modalContext, data);
                           },
@@ -368,7 +682,8 @@ Future<void> showCreatePostModal({
                 ),
               ],
             ),
-          );
+          ),
+        );
         },
       );
     },

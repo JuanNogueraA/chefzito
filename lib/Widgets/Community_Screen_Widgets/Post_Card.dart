@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
 class PostCard extends StatelessWidget {
-  final int postId;
-  final int authorId;
+  final String postId;
+  final String authorId;
   final String userName;
   final String userHandle;
   final String time;
@@ -14,6 +14,7 @@ class PostCard extends StatelessWidget {
   final String caption;
   final String imageUrl;
   final String? imageBase64;
+  final String avatarUrl;
   final bool isFollowing;
   final bool isMutualFollow;
   final bool isPrivate;
@@ -35,6 +36,7 @@ class PostCard extends StatelessWidget {
     required this.caption,
     required this.imageUrl,
     this.imageBase64,
+    required this.avatarUrl,
     required this.isFollowing,
     required this.isMutualFollow,
     required this.isLiked,
@@ -49,6 +51,16 @@ class PostCard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
+  }
+
+  ImageProvider _avatarProvider() {
+    if (avatarUrl.isEmpty) {
+      return const AssetImage('assets/img/avatar1.png');
+    }
+    if (avatarUrl.startsWith('http')) {
+      return NetworkImage(avatarUrl);
+    }
+    return AssetImage(avatarUrl);
   }
 
   void _handleMenuAction(BuildContext context, String action) {
@@ -154,10 +166,8 @@ class PostCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    'https://randomuser.me/api/portraits/lego/1.jpg',
-                  ),
+                CircleAvatar(
+                  backgroundImage: _avatarProvider(),
                   radius: 20,
                 ),
                 const SizedBox(width: 10),

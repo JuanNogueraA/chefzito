@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/rankings_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
+import 'package:chefzito/models/post_model.dart';
+import 'package:chefzito/models/recipe_model.dart';
+import 'package:chefzito/models/user_model.dart';
 
 // Nuestras piezas
 import 'package:chefzito/Widgets/Rankings_Screen_Widgets/Ranking_Tab_Button.dart';
@@ -16,21 +20,83 @@ class RankingsScreen extends StatefulWidget {
 
 class _RankingsScreenState extends State<RankingsScreen> {
   int selectedTab = 0;
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final RankingsUseCases _useCases;
   late final Future<void> _loadFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = RankingsUseCases(_adapter);
+    _loadFuture = _useCases.init();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
     return raw[0].toUpperCase() + raw.substring(1);
+  }
+
+  int _likesForRecipe(String recipeId, List<PostModel> posts) {
+    final related = posts.where((post) => post.recipeId == recipeId);
+    return related.fold(0, (sum, post) => sum + post.likesCount);
+  }
+
+  int _postsForRecipe(String recipeId, List<PostModel> posts) {
+    return posts.where((post) => post.recipeId == recipeId).length;
+  }
+
+  List<RecipeRankingItem> _buildRecipeRankings(
+    List<RecipeModel> recipes,
+    List<PostModel> posts,
+  ) {
+    final rankings = recipes
+        .map(
+          (recipe) => RecipeRankingItem(
+            recipe: recipe,
+            postsCount: _postsForRecipe(recipe.id, posts),
+            likes: _likesForRecipe(recipe.id, posts),
+          ),
+        )
+        .toList();
+
+    rankings.sort((a, b) => b.likes.compareTo(a.likes));
+    return rankings.take(6).toList();
+  }
+
+  List<ChefRankingItem> _buildChefRankings(
+    List<UserModel> users,
+    List<RecipeModel> recipes,
+    List<PostModel> posts,
+  ) {
+    final recipesByAuthor = <String, List<RecipeModel>>{};
+    for (final recipe in recipes) {
+      recipesByAuthor.putIfAbsent(recipe.authorId, () => []).add(recipe);
+    }
+
+    final rankings = <ChefRankingItem>[];
+    for (final user in users) {
+      final userRecipes = recipesByAuthor[user.id] ?? const [];
+      if (userRecipes.isEmpty) {
+        continue;
+      }
+      var likes = 0;
+      for (final recipe in userRecipes) {
+        likes += _likesForRecipe(recipe.id, posts);
+      }
+      rankings.add(
+        ChefRankingItem(
+          user: user,
+          recipeCount: userRecipes.length,
+          likes: likes,
+        ),
+      );
+    }
+
+    rankings.sort((a, b) => b.likes.compareTo(a.likes));
+    return rankings.take(6).toList();
   }
 
   @override
@@ -45,6 +111,12 @@ class _RankingsScreenState extends State<RankingsScreen> {
           }
 
           final chefName = _displayChefName();
+          final recipes = _useCases.getRecipes();
+          final posts = _useCases.getPosts();
+          final users = _useCases.getUsers();
+          final recipeRankings = _buildRecipeRankings(recipes, posts);
+          final chefRankings = _buildChefRankings(users, recipes, posts);
+          final ingredientRankings = _useCases.getIngredientRanking(limit: 6);
 
           return Column(
             children: [
@@ -111,7 +183,12 @@ class _RankingsScreenState extends State<RankingsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   children: [
-                    CurrentList(selectedTab: selectedTab),
+                    CurrentList(
+                      selectedTab: selectedTab,
+                      recipeRankings: recipeRankings,
+                      chefRankings: chefRankings,
+                      ingredientRankings: ingredientRankings,
+                    ),
                     const SizedBox(height: 10),
                     const WeeklyBanner(),
                   ],

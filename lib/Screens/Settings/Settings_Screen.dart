@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/settings_use_cases.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 // Nuestras importaciones modulares
 import 'package:chefzito/Widgets/Settings_Screen_Widgets/Notificaciones_Card.dart';
@@ -24,17 +25,23 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final SettingsUseCases _useCases;
   late final Future<void> _loadFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _useCases = SettingsUseCases(
+      initPort: _adapter,
+      chefNamePort: _adapter,
+      authPort: _adapter,
+    );
+    _loadFuture = _useCases.init();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _useCases.chefName.trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -219,8 +226,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       height: 55,
                       child: OutlinedButton(
-                        onPressed: () {
-                          _service.logout();
+                        onPressed: () async {
+                          await _useCases.logout();
+                          if (!mounted) return;
                           Navigator.pushNamedAndRemoveUntil(
                             context,
                             '/login',

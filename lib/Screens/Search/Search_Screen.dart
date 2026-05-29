@@ -3,9 +3,18 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:chefzito/Screens/Search/Recipe_Detail_Screen.dart';
 import 'package:chefzito/Screens/Search/Search_Results_Screen.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/services/chefzito_service.dart';
+import 'package:chefzito/core/application/use_cases/add_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/detect_ingredients_use_case.dart';
+import 'package:chefzito/core/application/use_cases/generate_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_chef_name_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_common_ingredients_use_case.dart';
+import 'package:chefzito/core/application/use_cases/get_recipe_use_case.dart';
+import 'package:chefzito/core/application/use_cases/init_app_use_case.dart';
+import 'package:chefzito/core/application/use_cases/search_recipes_use_case.dart';
+import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -15,7 +24,15 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final ChefzitoService _service = ChefzitoService();
+  final SupabaseChefzitoAdapter _adapter = SupabaseChefzitoAdapter();
+  late final InitAppUseCase _initAppUseCase;
+  late final GetChefNameUseCase _getChefNameUseCase;
+  late final GetCommonIngredientsUseCase _getCommonIngredientsUseCase;
+  late final DetectIngredientsUseCase _detectIngredientsUseCase;
+  late final GenerateRecipeUseCase _generateRecipeUseCase;
+  late final SearchRecipesUseCase _searchRecipesUseCase;
+  late final AddRecipeUseCase _addRecipeUseCase;
+  late final GetRecipeUseCase _getRecipeUseCase;
   final TextEditingController _ingredientController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   late final Future<void> _loadFuture;
@@ -25,11 +42,19 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = _service.init();
+    _initAppUseCase = InitAppUseCase(_adapter);
+    _getChefNameUseCase = GetChefNameUseCase(_adapter);
+    _getCommonIngredientsUseCase = GetCommonIngredientsUseCase(_adapter);
+    _detectIngredientsUseCase = DetectIngredientsUseCase(_adapter);
+    _generateRecipeUseCase = GenerateRecipeUseCase(_adapter);
+    _searchRecipesUseCase = SearchRecipesUseCase(_adapter);
+    _addRecipeUseCase = AddRecipeUseCase(_adapter);
+    _getRecipeUseCase = GetRecipeUseCase(_adapter);
+    _loadFuture = _initAppUseCase();
   }
 
   String _displayChefName() {
-    final raw = _service.currentChefName.trim();
+    final raw = _getChefNameUseCase().trim();
     if (raw.isEmpty) {
       return 'Invitado';
     }
@@ -108,13 +133,46 @@ class _SearchScreenState extends State<SearchScreen> {
       imageBytes = null;
     }
 
-    await _showAiAnalysisDialog(image.path, imageBytes);
+    if (!mounted) {
+      return;
+    }
+
+    if (imageBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pudimos leer la imagen. Intenta nuevamente.')),
+      );
+      return;
+    }
+
+    _showAiAnalysisDialog(image.path, imageBytes);
+
+    List<String> detected = [];
+    try {
+      detected = await _detectIngredientsUseCase(
+        imageBytes,
+        maxIngredients: 8,
+      );
+    } catch (error) {
+      detected = [];
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error IA: $error')),
+        );
+      }
+    }
 
     if (!mounted) {
       return;
     }
 
-    final detected = _mockDetectedIngredients();
+    if (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (detected.isEmpty) {
+      detected = _getCommonIngredientsUseCase(limit: 7);
+    }
+
     final selectedLower = _selectedIngredients.map((i) => i.toLowerCase()).toSet();
 
     setState(() {
@@ -130,46 +188,260 @@ class _SearchScreenState extends State<SearchScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('IA simulada: detectamos ${detected.length} ingredientes.'),
+        content: Text('IA detecto ${detected.length} ingredientes.'),
       ),
     );
   }
 
-  List<String> _mockDetectedIngredients() {
-    final fromCommon = _service.getCommonIngredients(limit: 12);
-    final preferred = ['Tomate', 'Cebolla', 'Ajo', 'Pollo', 'Pimiento', 'Zanahoria'];
-    final fallback = ['Brocoli', 'Pasta'];
+  Future<void> _generateAiRecipe() async {
+    if (_selectedIngredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona al menos un ingrediente.')),
+      );
+      return;
+    }
 
-    final detected = <String>[];
+    _showAiRecipeLoadingDialog();
 
-    for (final ingredient in preferred) {
-      if (!detected.contains(ingredient)) {
-        detected.add(ingredient);
+    Map<String, dynamic>? recipe;
+    try {
+      recipe = await _generateRecipeUseCase(
+        _selectedIngredients,
+        maxSteps: 6,
+      );
+    } catch (error) {
+      recipe = null;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error IA: $error')),
+        );
       }
     }
 
-    for (final ingredient in fromCommon) {
-      if (!detected.any((d) => d.toLowerCase() == ingredient.toLowerCase())) {
-        detected.add(ingredient);
-      }
-      if (detected.length >= 7) {
-        break;
-      }
+    if (!mounted) {
+      return;
     }
 
-    for (final ingredient in fallback) {
-      if (!detected.any((d) => d.toLowerCase() == ingredient.toLowerCase())) {
-        detected.add(ingredient);
-      }
-      if (detected.length >= 7) {
-        break;
-      }
+    if (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
     }
 
-    return detected.take(7).toList();
+    if (recipe == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pudimos generar una receta.')),
+      );
+      return;
+    }
+
+    await _showAiRecipeSheet(recipe);
   }
 
-  Future<void> _showAiAnalysisDialog(String imagePath, Uint8List? imageBytes) async {
+  void _showAiRecipeLoadingDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text('🧠', style: TextStyle(fontSize: 34)),
+                SizedBox(height: 8),
+                Text(
+                  'Creando tu receta con IA...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Esto puede tardar unos segundos',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF6B7280)),
+                ),
+                SizedBox(height: 18),
+                CircularProgressIndicator(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAiRecipeSheet(Map<String, dynamic> recipe) async {
+    final ingredients = (recipe['ingredients'] as List?)?.whereType<String>().toList() ?? [];
+    final steps = (recipe['steps'] as List?)?.whereType<String>().toList() ?? [];
+    final title = (recipe['title'] as String?) ?? 'Receta Chefzito';
+    final description = (recipe['description'] as String?) ?? '';
+    final prepTime = recipe['prepTimeMin']?.toString() ?? '20';
+    final difficulty = (recipe['difficulty'] as String?) ?? 'easy';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            bool isSaving = false;
+
+            Future<void> handleSave() async {
+              setModalState(() => isSaving = true);
+              final recipeId = await _addRecipeUseCase(
+                title: title,
+                description: description.isEmpty ? 'Receta creada con IA en Chefzito.' : description,
+                steps: steps,
+                prepTimeMin: int.tryParse(prepTime) ?? 20,
+                difficulty: difficulty,
+                generatedByAi: true,
+              );
+
+              if (!mounted) {
+                return;
+              }
+
+              if (recipeId == null) {
+                setModalState(() => isSaving = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No se pudo guardar la receta.')),
+                );
+                return;
+              }
+
+              Navigator.of(context).pop();
+              final savedRecipe = _getRecipeUseCase(recipeId);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => RecipeDetailScreen(
+                    recipe: savedRecipe,
+                    selectedIngredients: _selectedIngredients,
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Color(0xFFF3F4F6),
+                            child: Text('✨'),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (description.isNotEmpty)
+                        Text(
+                          description,
+                          style: const TextStyle(color: Color(0xFF4B5563), height: 1.4),
+                        ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          _InfoChip(label: '⏱ ${prepTime} min'),
+                          const SizedBox(width: 8),
+                          _InfoChip(label: '🔥 $difficulty'),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Ingredientes sugeridos',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ingredients
+                            .map((item) => Chip(
+                                  label: Text(item),
+                                  backgroundColor: const Color(0xFFF3F4F6),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Pasos',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+                      ),
+                      const SizedBox(height: 8),
+                      ...steps.asMap().entries.map(
+                            (entry) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${entry.key + 1}.',
+                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(entry.value)),
+                                ],
+                              ),
+                            ),
+                          ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                              child: const Text('Cerrar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: isSaving ? null : handleSave,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7C3AED),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: Text(isSaving ? 'Guardando...' : 'Guardar receta'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAiAnalysisDialog(String imagePath, Uint8List? imageBytes) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -269,14 +541,6 @@ class _SearchScreenState extends State<SearchScreen> {
         );
       },
     );
-
-    await Future.delayed(const Duration(seconds: 5));
-
-    if (!mounted) {
-      return;
-    }
-
-    Navigator.of(context, rootNavigator: true).pop();
   }
 
   void _openResultsScreen() {
@@ -288,7 +552,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     final selected = List<String>.from(_selectedIngredients);
-    final recipes = _service.searchRecipesByIngredients(selected);
+    final recipes = _searchRecipesUseCase(selected);
 
     Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -325,7 +589,7 @@ class _SearchScreenState extends State<SearchScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final commonIngredients = _service.getCommonIngredients();
+          final commonIngredients = _getCommonIngredientsUseCase();
           final chefName = _displayChefName();
 
           return Stack(
@@ -628,26 +892,60 @@ class _SearchScreenState extends State<SearchScreen> {
                   bottom: 18,
                   child: SafeArea(
                     top: false,
-                    child: Material(
-                      color: const Color(0xFFFF4D2D),
-                      borderRadius: BorderRadius.circular(16),
-                      elevation: 8,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: _openResultsScreen,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: Text(
-                            'Buscar recetas (${_selectedIngredients.length} ingredientes) →',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Material(
+                          color: const Color(0xFF7C3AED),
+                          borderRadius: BorderRadius.circular(16),
+                          elevation: 8,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: _generateAiRecipe,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.auto_awesome, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Crear receta con IA',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                        Material(
+                          color: const Color(0xFFFF4D2D),
+                          borderRadius: BorderRadius.circular(16),
+                          elevation: 8,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: _openResultsScreen,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Text(
+                                'Buscar recetas (${_selectedIngredients.length} ingredientes) →',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -656,6 +954,27 @@ class _SearchScreenState extends State<SearchScreen> {
         },
       ),
       bottomNavigationBar: const Navbar(),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final String label;
+
+  const _InfoChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF374151)),
+      ),
     );
   }
 }
