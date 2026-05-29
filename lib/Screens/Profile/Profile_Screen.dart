@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:chefzito/Widgets/NavBar.dart';
-import 'package:chefzito/Screens/Settings/Settings_Screen.dart'; // Importamos la pantalla de ajustes
+import 'package:chefzito/Screens/Settings/Settings_Screen.dart';
 import 'package:chefzito/core/application/use_cases/profile_use_cases.dart';
 import 'package:chefzito/core/infrastructure/supabase/supabase_chefzito_adapter.dart';
+import 'package:chefzito/models/recipe_model.dart';
 
-// ¡Nuestros componentes importados!
+// Componentes importados
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Profile_Card.dart';
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Profile_Tab_Button.dart';
 import 'package:chefzito/Widgets/Profile_Screen_Widgets/Photo_Grid.dart';
@@ -40,6 +41,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return raw[0].toUpperCase() + raw.substring(1);
   }
 
+  List<RecipeModel> _getRecipesToDisplay() {
+    if (isMyRecipesTab) {
+      return _adapter.getMyRecipes();
+    } else {
+      return _adapter.getSavedRecipes();
+    }
+  }
+
+  int _getRecipesCount() {
+    return _adapter.getMyRecipes().length;
+  }
+
+  int _getLikesCount() {
+    // Contar likes de todas las recetas del usuario
+    int total = 0;
+    for (final recipe in _adapter.getMyRecipes()) {
+      total += recipe.likesCount ?? 0;
+    }
+    return total;
+  }
+
+  int _getCommentsCount() {
+    // Contar comentarios en posts del usuario
+    final userId = _useCases.currentUser?.id ?? '';
+    int total = 0;
+    for (final comment in _adapter.getCommentsByPost('')) {
+      // Este es un placeholder, deberíamos tener acceso a los posts del usuario
+      total += 1;
+    }
+    return total;
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = _displayChefName();
@@ -67,30 +100,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         height: 220,
                         width: double.infinity,
-                        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 20, left: 20, right: 20),
+                        padding: EdgeInsets.only(
+                          top: MediaQuery.of(context).padding.top + 20,
+                          left: 20,
+                          right: 20,
+                        ),
                         decoration: const BoxDecoration(
-                          gradient: LinearGradient(colors: [Color(0xFF8A2BE2), Color(0xFFB026FF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF8A2BE2),
+                              Color(0xFFB026FF),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Expanded(child: Text("¡Un buen cocinero,\nSiempre esta Actualizado!", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, height: 1.2))),
+                            const Expanded(
+                              child: Text(
+                                "¡Un buen cocinero,\nSiempre esta Actualizado!",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
                             GestureDetector(
                               onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SettingsScreen(),
+                                  ),
+                                );
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                                child: const Icon(Icons.settings, color: Colors.white, size: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.settings,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
                             )
                           ],
                         ),
                       ),
                       Positioned(
-                        top: 130, left: 20, right: 20,
+                        top: 130,
+                        left: 20,
+                        right: 20,
                         child: ProfileCard(
                           onEditProfile: () => showEditProfileModal(
                             context,
@@ -105,6 +174,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           userName: displayName,
                           userHandle: handle,
                           avatarUrl: avatarUrl,
+                          bio: currentUser?.bio ?? '',
+                          recipesCount: _getRecipesCount(),
+                          followersCount: currentUser?.followersCount ?? 0,
+                          followingCount: currentUser?.followingCount ?? 0,
+                          likesCount: _getLikesCount(),
                         ),
                       ),
                     ],
@@ -117,12 +191,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Row(
                     children: [
                       ProfileTabButton(
-                        title: "Mis Recetas", icon: Icons.grid_on, isActive: isMyRecipesTab,
+                        title: "Mis Recetas",
+                        icon: Icons.grid_on,
+                        isActive: isMyRecipesTab,
                         onTap: () => setState(() => isMyRecipesTab = true),
                       ),
                       const SizedBox(width: 15),
                       ProfileTabButton(
-                        title: "Guardadas", icon: Icons.favorite_border, isActive: !isMyRecipesTab,
+                        title: "Guardadas",
+                        icon: Icons.favorite_border,
+                        isActive: !isMyRecipesTab,
                         onTap: () => setState(() => isMyRecipesTab = false),
                       ),
                     ],
@@ -130,16 +208,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // SECCIÓN 3: GRILLA Y LOGROS
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: PhotoGrid(),
+                // SECCIÓN 3: GRILLA DE RECETAS
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: PhotoGrid(
+                    recipes: _getRecipesToDisplay(),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: AchievementsCard(),
+                // SECCIÓN 4: LOGROS
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: AchievementsCard(
+                    recipesCount: _getRecipesCount(),
+                    commentsCount: _getCommentsCount(),
+                    followersCount: currentUser?.followersCount ?? 0,
+                  ),
                 ),
                 const SizedBox(height: 30),
               ],
@@ -147,7 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-      bottomNavigationBar: Navbar(), 
+      bottomNavigationBar: Navbar(),
     );
   }
 }

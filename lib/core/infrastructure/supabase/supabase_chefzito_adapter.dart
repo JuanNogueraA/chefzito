@@ -221,4 +221,21 @@ class SupabaseChefzitoAdapter
   Future<String?> uploadAvatar(Uint8List bytes) {
     return _service.uploadAvatar(bytes);
   }
+
+  // PROFILE - Mis Recetas y Guardadas
+  List<RecipeModel> getMyRecipes() {
+    return _service.getMyRecipes();
+  }
+
+  List<RecipeModel> getSavedRecipes() {
+    return _service.getSavedRecipes();
+  }
+
+  bool isRecipeSaved(String recipeId) {
+    return _service.isRecipeSaved(recipeId);
+  }
+
+  Future<void> toggleSaveRecipe(String recipeId) {
+    return _service.toggleSaveRecipe(recipeId);
+  }
 }

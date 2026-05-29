@@ -27,6 +27,7 @@ class ChefzitoService {
   List<FollowModel> follows = [];
   List<RecipeModel> recipes = [];
   List<TrendModel> trends = [];
+  List<String> savedRecipeIds = []; // IDs de recetas guardadas
 
   String? _currentUserId;
 
@@ -160,13 +161,24 @@ class ChefzitoService {
         .map((follow) => FollowModel.fromJson(follow as Map<String, dynamic>))
         .toList();
 
+    // Cargar recetas guardadas
+    if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+      final savedResponse = await _client
+          .from('saved_recipes')
+          .select('recipe_id')
+          .eq('user_id', _currentUserId!);
+      savedRecipeIds = (savedResponse as List)
+          .map((item) => (item as Map<String, dynamic>)['recipe_id'] as String)
+          .toList();
+    }
+
     trends = [];
 
     loaded = true;
 
     // Log temporal para verificar conexión con Supabase.
     print(
-      'Supabase OK: users=${users.length}, recipes=${recipes.length}, posts=${posts.length}, comments=${comments.length}',
+      'Supabase OK: users=${users.length}, recipes=${recipes.length}, posts=${posts.length}, comments=${comments.length}, saved=${savedRecipeIds.length}',
     );
   }
 
@@ -896,5 +908,50 @@ class ChefzitoService {
       return normalized;
     }
     return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
+  // ===== MÉTODOS PARA RECETAS DEL USUARIO =====
+
+  /// Obtiene las recetas creadas por el usuario actual
+  List<RecipeModel> getMyRecipes() {
+    final userId = _currentUserId;
+    if (userId == null) {
+      return [];
+    }
+    return recipes.where((r) => r.authorId == userId).toList();
+  }
+
+  /// Obtiene las recetas guardadas por el usuario actual
+  List<RecipeModel> getSavedRecipes() {
+    return recipes.where((r) => savedRecipeIds.contains(r.id)).toList();
+  }
+
+  /// Verifica si una receta está guardada
+  bool isRecipeSaved(String recipeId) {
+    return savedRecipeIds.contains(recipeId);
+  }
+
+  /// Guarda o desguarda una receta
+  Future<void> toggleSaveRecipe(String recipeId) async {
+    final userId = _effectiveCurrentUserId;
+    if (userId == null) {
+      return;
+    }
+
+    if (savedRecipeIds.contains(recipeId)) {
+      // Desguardar
+      await _client.from('saved_recipes').delete().match({
+        'user_id': userId,
+        'recipe_id': recipeId,
+      });
+      savedRecipeIds.remove(recipeId);
+    } else {
+      // Guardar
+      await _client.from('saved_recipes').insert({
+        'user_id': userId,
+        'recipe_id': recipeId,
+      });
+      savedRecipeIds.add(recipeId);
+    }
   }
 }
