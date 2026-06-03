@@ -1,15 +1,28 @@
+/// Modelo de datos que representa una Receta en la aplicación.
 class RecipeModel {
+  /// Identificador único de la receta.
   String id;
+  /// Identificador del usuario creador (autor) de la receta.
   String authorId;
+  /// Título de la receta.
   String title;
+  /// Descripción breve de la receta.
   String description;
+  /// URL de la imagen de portada de la receta.
   String coverImageUrl;
+  /// Lista de los pasos (instrucciones) a seguir para preparar la receta.
   List<String> steps;
+  /// Tiempo de preparación estimado en minutos.
   int prepTimeMin;
+  /// Cantidad de porciones que rinde la receta.
   int servings;
+  /// Nivel de dificultad (ej. 'easy', 'medium', 'hard').
   String difficulty;
+  /// Indica si la receta fue generada utilizando Inteligencia Artificial.
   bool generatedByAi;
+  /// Cantidad de "Me gusta" que ha recibido la receta.
   int likesCount;
+  /// Cantidad de veces que la receta ha sido guardada por los usuarios.
   int savesCount;
 
   RecipeModel({
@@ -27,6 +40,8 @@ class RecipeModel {
     this.savesCount = 0,
   });
 
+  /// Crea una instancia de [RecipeModel] a partir de un mapa JSON.
+  /// [steps] puede ser inyectado por separado ya que suele provenir de otra consulta (tabla relacionada).
   factory RecipeModel.fromJson(
     Map<String, dynamic> json, {
     List<String> steps = const [],
@@ -47,6 +62,7 @@ class RecipeModel {
     );
   }
 
+  /// Convierte el [RecipeModel] a un mapa JSON para interactuar con la base de datos.
   Map<String, dynamic> toJson() {
     return {
       'id': id,

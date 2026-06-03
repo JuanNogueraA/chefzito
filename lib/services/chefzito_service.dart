@@ -11,7 +11,12 @@ import '../models/recipe_model.dart';
 import '../models/trend_model.dart';
 import '../models/user_model.dart';
 
-// Servicio conectado a Supabase
+/// Servicio principal (Singleton) conectado a Supabase.
+/// Se encarga de gestionar el estado global de la aplicación, incluyendo:
+/// - Autenticación de usuarios (Login/Registro/Logout)
+/// - Operaciones CRUD para Recetas, Publicaciones y Comentarios
+/// - Interacción con la IA (Gemini) a través de Supabase Edge Functions
+/// - Gestión de seguidores e ingredientes
 class ChefzitoService {
   static final ChefzitoService _instance = ChefzitoService._internal();
 
@@ -108,7 +113,8 @@ class ChefzitoService {
     _currentUserId = _client.auth.currentUser?.id;
   }
 
-  // Carga datos iniciales desde Supabase
+  /// Carga los datos iniciales desde Supabase y los almacena en memoria local.
+  /// Obtiene usuarios, recetas, publicaciones, comentarios, seguidores y recetas guardadas.
   Future<void> init() async {
     if (loaded) return;
 
@@ -182,6 +188,8 @@ class ChefzitoService {
     );
   }
 
+  /// Inicia sesión con el correo y contraseña especificados utilizando Supabase Auth.
+  /// Retorna `null` si fue exitoso, o un mensaje de error si falló.
   Future<String?> login({
     required String email,
     required String password,
@@ -208,6 +216,8 @@ class ChefzitoService {
     }
   }
 
+  /// Registra un nuevo usuario en Supabase Auth y crea su registro en la tabla `users`.
+  /// Retorna `null` si fue exitoso, o un mensaje de error si falló.
   Future<String?> register({
     required String username,
     required String email,
@@ -317,6 +327,8 @@ class ChefzitoService {
     return prettyExtracted.take(limit).toList();
   }
 
+  /// Detecta ingredientes a partir de una imagen utilizando Google Gemini (vía Supabase Edge Functions).
+  /// Retorna una lista de ingredientes en formato string.
   Future<List<String>> detectIngredientsFromImage(
     Uint8List imageBytes, {
     int maxIngredients = 10,
@@ -393,6 +405,8 @@ class ChefzitoService {
         .toList();
   }
 
+  /// Genera una receta detallada (título, descripción, pasos) utilizando IA
+  /// a partir de una lista de ingredientes proporcionada.
   Future<Map<String, dynamic>?> generateRecipeFromIngredients(
     List<String> ingredients, {
     int maxSteps = 6,

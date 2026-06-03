@@ -96,6 +96,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Future<void> _startCookingFlow() async {
+    // Verifica que la receta tenga pasos antes de iniciar el flujo
+    if (widget.recipe.steps.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Esta receta no tiene pasos registrados aún.'),
+          backgroundColor: Color(0xFFFF4D2D),
+        ),
+      );
+      return;
+    }
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -429,18 +440,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     const SizedBox(height: 12),
                     _SectionCard(
                       title: '📝 Pasos a seguir',
-                      child: Column(
-                        children: widget.recipe.steps.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final step = entry.value;
-                          final isLast = index == widget.recipe.steps.length - 1;
-                          return _StepTimelineItem(
-                            index: index,
-                            step: step,
-                            isLast: isLast,
-                          );
-                        }).toList(),
-                      ),
+                      child: widget.recipe.steps.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'Esta receta no tiene pasos registrados todavía.',
+                                style: TextStyle(color: Color(0xFF6B7280)),
+                              ),
+                            )
+                          : Column(
+                              children: widget.recipe.steps.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final step = entry.value;
+                                final isLast = index == widget.recipe.steps.length - 1;
+                                return _StepTimelineItem(
+                                  index: index,
+                                  step: step,
+                                  isLast: isLast,
+                                );
+                              }).toList(),
+                            ),
                     ),
                     const SizedBox(height: 12),
                     _SectionCard(
